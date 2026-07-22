@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, User, Hospital, AlertCircle, ShieldAlert } from 'lucide-react';
-import logo from './image.png';
+import logo from './ramaiah.png';
 
 export default function LoginScreen({ onLoginSuccess }) {
   const [username, setUsername] = useState('');
@@ -152,7 +152,7 @@ export default function LoginScreen({ onLoginSuccess }) {
 
         {/* Footer */}
         <p className="text-center text-[10px] font-semibold text-on-surface-variant/50 uppercase tracking-widest mt-8">
-          © 2026 PESU IMSR. Authorized Access Only.
+          © 2026 RAMAIAH HOSPITAL. Authorized Access Only.
         </p>
       </motion.div>
     </div>

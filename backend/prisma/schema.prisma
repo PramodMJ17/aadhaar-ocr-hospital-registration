@@ -18,6 +18,7 @@ enum Role {
 
 model Patient {
   id            String   @id @default(uuid())
+  hospitalId    String   @unique
   fullName      String
   dob           String
   gender        String

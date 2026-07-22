@@ -341,19 +341,19 @@ app.get('/api/dashboard', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONI
     });
 
     return res.json({
-      totalPatients,
-      todaysRegistrations,
-      existingPatients,
-      newPatients,
-      recentRegistrations: recentPatients.map((patient) => ({
+    totalPatients,
+    todaysRegistrations: newPatients,
+    existingPatients,
+    newPatients,
+    recentRegistrations: recentPatients.map((patient) => ({
         id: patient.id,
         fullName: patient.fullName,
         aadhaarNumber: patient.aadhaarNumber,
         createdAt: patient.createdAt.toISOString(),
         status: patient.createdAt >= todayStart ? 'New' : 'Existing',
-      })),
-      dbStatus: 'ok'
-    });
+    })),
+    dbStatus: 'ok'
+});
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     return res.status(500).json({ error: 'Unable to load dashboard data.' });
@@ -399,16 +399,26 @@ app.post('/api/register', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONI
       });
     }
 
-    const patient = await prisma.patient.create({
-      data: {
-        fullName: fullName || '',
-        dob: dob || '',
-        gender: gender || '',
-        aadhaarNumber,
-        address: address || ''
-      }
-    });
+    // Generate Hospital Registration ID
+const year = new Date().getFullYear();
 
+const patientCount = await prisma.patient.count();
+
+const hospitalId = `RMH-${year}-${String(patientCount + 1).padStart(4, "0")}`;
+
+// Create Patient
+const patient = await prisma.patient.create({
+  data: {
+    hospitalId,
+    fullName: fullName || '',
+    dob: dob || '',
+    gender: gender || '',
+    aadhaarNumber,
+    address: address || ''
+  }
+});
+
+console.log(patient);
     return res.status(201).json({
       success: true,
       existing: false,

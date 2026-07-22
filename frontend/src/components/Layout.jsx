@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bell, ChevronLeft, Upload, Scan, FileCheck, ShieldCheck } from 'lucide-react';
-import logo from './image.png';
+import logo from './ramaiah.png';
 import { motion } from 'motion/react';
 
 export default function Layout({ children, currentStep, onBack, onNavigate, admin, onLogout, notification, onClearNotification }) {
@@ -32,9 +32,9 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
             </button>
           )}
           <div className="flex items-center gap-2">
-            <img src={logo} alt="PES University" className="w-14 h-14 object-contain flex-shrink-0 -mt-1" />
+            <img src={logo} alt="Ramaiah University" className="w-14 h-14 object-contain flex-shrink-0 -mt-1" />
             <h1 className="text-xl font-extrabold text-primary tracking-tight font-headline">
-              PESU Hospital
+              Ramaiah Memorial Hospital
             </h1>
           </div>
         </div>
@@ -146,24 +146,42 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
         </main>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-surface-container-low border-t border-outline-variant/10 py-10 px-8 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col gap-2">
-            <span className="text-on-surface-variant font-headline text-lg font-extrabold tracking-tight">PESU IMSR</span>
-            <p className="text-on-surface-variant/60 text-[11px] uppercase tracking-widest font-semibold max-w-md">
-              © 2026 PESU IMSR. All medical data is processed.
-            </p>
-          </div>
-          <div className="flex gap-8">
-            {['Privacy Policy', 'Support', 'Terms of Service'].map(link => (
-              <a key={link} href="#" className="text-on-surface-variant/60 hover:text-primary transition-all text-[11px] uppercase tracking-widest font-semibold">
-                {link}
-              </a>
-            ))}
-          </div>
-        </div>
-      </footer>
+     {/* Footer */}
+<footer className="bg-surface-container-low border-t border-outline-variant/10 py-10 px-8 mt-auto">
+  <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+
+    {/* Left Section */}
+   <div className="flex flex-col gap-2">
+
+  <span className="text-on-surface-variant font-headline text-lg font-extrabold tracking-tight">
+    Ramaiah Memorial Hospital
+  </span>
+
+  <span className="text-primary text-xs font-semibold tracking-wide">
+    Aadhaar OCR Registration System
+  </span>
+
+  <p className="text-on-surface-variant/60 text-[11px] uppercase tracking-widest font-semibold max-w-md">
+    © 2026 Ramaiah Memorial Hospital. All medical data is processed securely.
+  </p>
+
+</div>
+
+    {/* Right Section */}
+    <div className="flex gap-8">
+      {["Privacy Policy", "Support", "Terms of Service"].map((link) => (
+        <a
+          key={link}
+          href="#"
+          className="text-on-surface-variant/60 hover:text-primary transition-all text-[11px] uppercase tracking-widest font-semibold"
+        >
+          {link}
+        </a>
+      ))}
     </div>
+
+  </div>
+</footer>
+</div>
   );
 }

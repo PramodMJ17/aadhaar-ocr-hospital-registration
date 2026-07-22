@@ -29,6 +29,7 @@ export default function App() {
     return savedAdmin ? JSON.parse(savedAdmin) : null;
   });
   const [step, setStep] = useState(token ? 'dashboard' : 'upload');
+  console.log("Current Step:", step);
   const [image, setImage] = useState(null);
   const [extractedData, setExtractedData] = useState(INITIAL_PATIENT_DATA);
   const [registrationResult, setRegistrationResult] = useState(null);
@@ -74,26 +75,31 @@ export default function App() {
     }, 5000);
   };
 
-  const handleReset = () => {
-    clearNotification();
-    setStep('upload');
-    setImage(null);
-    setExtractedData(INITIAL_PATIENT_DATA);
-    setRegistrationResult(null);
-  };
+ const handleReset = () => {
+  console.log("🔥 handleReset CALLED");
 
-  const handleNavigate = (destination) => {
-    if (destination === 'dashboard' || destination === 'upload') {
-      setStep(destination);
-    }
-  };
+  clearNotification();
+  setStep("upload");
+  setImage(null);
+  setExtractedData(INITIAL_PATIENT_DATA);
+  setRegistrationResult(null);
+};
 
-  const handleBack = () => {
-    if (step === 'scanning') setStep('upload');
-    if (step === 'review') setStep('upload');
-    if (step === 'success') setStep('review');
-  };
+ const handleNavigate = (destination) => {
+  console.log("🔥 handleNavigate", destination);
 
+  if (destination === "dashboard" || destination === "upload") {
+    setStep(destination);
+  }
+};
+
+ const handleBack = () => {
+  console.log("handleBack CALLED", step);
+
+  if (step === "scanning") setStep("upload");
+  if (step === "review") setStep("upload");
+  if (step === "success") setStep("review");
+};
   const handleUploadComplete = (img) => {
     setRegistrationResult(null);
     setImage(img);
@@ -106,61 +112,80 @@ export default function App() {
   };
 
   const handleRegister = async (updatedData) => {
-    const payload = {
-      fullName: updatedData.fullName || '',
-      dob: updatedData.dob || '',
-      gender: updatedData.gender || '',
-      aadhaarNumber: updatedData.aadhaarNumber || '',
-      address: updatedData.address || '',
-    };
+  console.log("Register button clicked");
 
-    setExtractedData(payload);
+  const payload = {
+    fullName: updatedData.fullName || '',
+    dob: updatedData.dob || '',
+    gender: updatedData.gender || '',
+    aadhaarNumber: updatedData.aadhaarNumber || '',
+    address: updatedData.address || '',
+  };
 
-    let registrationResult = {
+  setExtractedData(payload);
+
+  let registrationResult = {
+    success: false,
+    existing: false,
+    patient: payload,
+  };
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify(payload),
+    });
+
+    console.log("Response Status:", res.status);
+
+    const body = await res.json().catch(() => ({}));
+
+    console.log("Response Body:", body);
+
+    if (!res.ok) {
+      const message = body?.error || 'Registration failed. Please try again.';
+      showNotification(message, 'error');
+    } else if (body.success) {
+      console.log("Moving to Success Screen");
+
+      registrationResult = {
+        success: true,
+        existing: body.existing === true,
+        patient: body.patient || payload,
+      };
+    } else {
+      const message = body?.message || 'Registration response was unexpected.';
+      showNotification(message, 'warning');
+    }
+  } catch (err) {
+    console.error("Registration Error:", err);
+
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'Registration service unavailable.';
+
+    showNotification(message, 'error');
+
+    registrationResult = {
       success: false,
       existing: false,
       patient: payload,
     };
+  }
 
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify(payload),
-      });
+  console.log("Final Registration Result:", registrationResult);
 
-      const body = await res.json().catch(() => ({}));
+  setRegistrationResult(registrationResult);
 
-      if (!res.ok) {
-        const message = body?.error || 'Registration failed. Please try again.';
-        showNotification(message, 'error');
-      } else if (body.success) {
-        registrationResult = {
-          success: true,
-          existing: body.existing === true,
-          patient: body.patient || payload,
-        };
-      } else {
-        const message = body?.message || 'Registration response was unexpected.';
-        showNotification(message, 'warning');
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registration service unavailable.';
-      showNotification(message, 'error');
-      registrationResult = {
-        success: false,
-        existing: false,
-        patient: payload,
-      };
-    }
+  console.log("Changing step to success");
 
-    setRegistrationResult(registrationResult);
-    setStep('success');
-  };
-
+  setStep('success');
+};
   if (!token) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
@@ -204,13 +229,13 @@ export default function App() {
       )}
       
       {step === 'success' && (
-        <SuccessScreen 
-          data={extractedData}
-          result={registrationResult}
-          onReset={handleReset}
-          onViewData={() => setStep('review')}
-        />
-      )}
+  <SuccessScreen
+    data={extractedData}
+    result={registrationResult}
+    onReset={handleReset}
+    onViewData={() => setStep('review')}
+  />
+)}
     </Layout>
   );
 }
