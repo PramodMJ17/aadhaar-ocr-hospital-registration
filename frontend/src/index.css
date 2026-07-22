@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-headline: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #00478d;
+  --color-primary-container: #005eb8;
+  --color-secondary: #006e1c;
+  --color-surface: #f7f9fc;
+  --color-surface-container-low: #f2f4f7;
+  --color-surface-container-highest: #e0e3e6;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #424752;
+  --color-outline-variant: #c2c6d4;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+@layer base {
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Manrope:wght@400;600;700;800&display=swap');
+
+  body {
+    @apply bg-surface text-on-surface font-sans antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+  }
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #00478d 0%, #005eb8 100%);
+}
+
+.success-gradient {
+  background: linear-gradient(135deg, #006e1c 0%, #00a329 100%);
+}
+
+.glass-header {
+  @apply bg-white/70 backdrop-blur-xl border-b border-outline-variant/20;
+}
+
+.ambient-shadow {
+  box-shadow: 0 12px 32px rgba(25, 28, 30, 0.06);
+}
+
+@keyframes spin-custom {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-custom {
+  animation: spin-custom 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+@keyframes scan {
+  0% { top: 0%; opacity: 0; }
+  50% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scan {
+  animation: scan 2.5s ease-in-out infinite;
+}

@@ -1,0 +1,7 @@
+{
+  "name": "PESU IMSR Aadhaar OCR",
+  "description": "A clinical-grade Aadhaar card OCR registration system for PES University IMSR.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
