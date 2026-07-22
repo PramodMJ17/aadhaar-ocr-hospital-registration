@@ -12,11 +12,17 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
   ];
 
   const currentStepIndex = steps.findIndex(s => s.id === currentStep);
-  const activeNav = currentStep === 'dashboard' ? 'dashboard' : 'upload';
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard' },
-    { id: 'upload', label: 'Registration' },
-  ];
+  const activeNav =
+  currentStep === "dashboard"
+    ? "dashboard"
+    : currentStep === "history"
+    ? "history"
+    : "upload";
+ const navItems = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'upload', label: 'Registration' },
+  { id: 'history', label: 'Patient History' },
+];
 
   return (
     <div className="min-h-screen flex flex-col bg-surface">

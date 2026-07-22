@@ -437,6 +437,38 @@ console.log(patient);
   }
 });
 
+app.get("/patients", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const patients = await prisma.patient.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limit,
+    });
+
+    const totalPatients = await prisma.patient.count();
+
+    res.json({
+      patients,
+      totalPatients,
+      currentPage: page,
+      totalPages: Math.ceil(totalPatients / limit),
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Unable to fetch patients",
+    });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Backend server running on http://localhost:${port}`);
 });

@@ -2,7 +2,6 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-
 import React, { useState, useRef } from 'react';
 import Layout from './components/Layout';
 import UploadScreen from './components/UploadScreen';
@@ -11,6 +10,7 @@ import ReviewScreen from './components/ReviewScreen';
 import SuccessScreen from './components/SuccessScreen';
 import Dashboard from './components/Dashboard';
 import LoginScreen from './components/LoginScreen';
+import PatientHistory from './components/PatientHistory';
 
 const INITIAL_PATIENT_DATA = {
   fullName: '',
@@ -88,7 +88,11 @@ export default function App() {
  const handleNavigate = (destination) => {
   console.log("🔥 handleNavigate", destination);
 
-  if (destination === "dashboard" || destination === "upload") {
+  if (
+    destination === "dashboard" ||
+    destination === "upload" ||
+    destination === "history"
+  ) {
     setStep(destination);
   }
 };
@@ -206,6 +210,9 @@ export default function App() {
           onError={(message) => showNotification(message, 'error')}
         />
       )}
+      {step === 'history' && (
+  <PatientHistory />
+)}
 
       {step === 'upload' && (
         <UploadScreen onNext={handleUploadComplete} />
