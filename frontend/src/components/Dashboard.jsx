@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, ClipboardList, Users, CheckCircle2, Clock3 } from 'lucide-react';
+import { Activity, ClipboardList, Users, CheckCircle2, Clock3, UserPlus, UserCheck, Calendar } from 'lucide-react';
 
 const BACKEND_URL = 'http://localhost:5000';
 
@@ -12,6 +12,15 @@ function formatDateTime(isoString) {
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+function maskAadhaar(aadhaar) {
+  if (!aadhaar) return "";
+  const cleaned = aadhaar.toString().replace(/\D/g, "");
+  if (cleaned.length >= 4) {
+    return `XXXX XXXX ${cleaned.slice(-4)}`;
+  }
+  return aadhaar;
 }
 
 export default function Dashboard({ token, onError }) {
@@ -65,130 +74,145 @@ export default function Dashboard({ token, onError }) {
     {
       label: 'Total Patients',
       value: stats.totalPatients,
+      subtext: 'Registered in database',
       icon: Users,
-      accent: 'bg-primary/10 text-primary',
-    },
-    {
-      label: "Today's Registrations",
-      value: stats.todaysRegistrations,
-      icon: Activity,
-      accent: 'bg-secondary/10 text-secondary',
-    },
-    {
-      label: 'Existing Patients',
-      value: stats.existingPatients,
-      icon: ClipboardList,
-      accent: 'bg-surface-container-low text-on-surface',
+      accent: 'bg-blue-50 text-blue-600 border-blue-100',
+      badge: 'bg-blue-100/80 text-blue-700',
     },
     {
       label: 'New Patients',
       value: stats.newPatients,
-      icon: CheckCircle2,
-      accent: 'bg-success-gradient/10 text-success-gradient',
+      subtext: 'First-time admissions',
+      icon: UserPlus,
+      accent: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      badge: 'bg-emerald-100/80 text-emerald-700',
+    },
+    {
+      label: 'Existing Patients',
+      value: stats.existingPatients,
+      subtext: 'Returning hospital records',
+      icon: UserCheck,
+      accent: 'bg-purple-50 text-purple-600 border-purple-100',
+      badge: 'bg-purple-100/80 text-purple-700',
+    },
+    {
+      label: "Today's Registrations",
+      value: stats.todaysRegistrations,
+      subtext: 'Admitted today',
+      icon: Calendar,
+      accent: 'bg-sky-50 text-sky-600 border-sky-100',
+      badge: 'bg-sky-100/80 text-sky-700',
     },
   ];
 
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 lg:grid-cols-[1.5fr_1fr] items-start">
-        <div className="rounded-[32px] bg-white border border-outline-variant/10 p-8 shadow-[0_20px_60px_rgba(0,71,141,0.08)]">
-          <div className="flex items-center justify-between gap-6 mb-8">
+    <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      {/* Overview Header & Statistics Grid */}
+      <section className="space-y-6">
+        <div className="rounded-3xl bg-white border border-gray-200/80 p-6 sm:p-8 shadow-sm">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
-              <p className="text-sm uppercase tracking-[0.26em] text-on-surface-variant font-semibold">Hospital Admin Dashboard</p>
-              <h1 className="mt-3 text-3xl font-extrabold text-on-surface">Patient Registration Overview</h1>
-              <p className="mt-3 text-sm text-on-surface-variant max-w-xl leading-relaxed">
+              <p className="text-xs uppercase tracking-[0.25em] text-blue-600 font-bold">Hospital Admin Dashboard</p>
+              <h1 className="mt-2 text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Patient Registration Overview</h1>
+              <p className="mt-2 text-sm text-gray-500 max-w-2xl leading-relaxed">
                 Monitor registration flow, track daily admissions, and access recent Aadhaar registrations from one responsive control panel.
               </p>
             </div>
-            <div className="rounded-3xl bg-primary/5 p-4 text-primary shadow-lg shadow-primary/10">
-              <Clock3 className="w-8 h-8" />
+            <div className="rounded-2xl bg-blue-50 p-3.5 text-blue-600 border border-blue-100 shadow-sm flex items-center gap-2 text-sm font-semibold self-start md:self-auto">
+              <Clock3 className="w-5 h-5" />
+              <span>Real-time Sync</span>
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            {cards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <div key={card.label} className="rounded-[28px] border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-sm">
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.3em] text-on-surface-variant font-semibold">{card.label}</p>
-                      <p className="mt-3 text-3xl font-extrabold text-on-surface">{card.value}</p>
-                    </div>
-                    <div className={`rounded-3xl p-3 ${card.accent}`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                  </div>
-                  <p className="text-xs text-on-surface-variant">Updated live from hospital admissions data.</p>
-                </div>
-              );
-            })}
           </div>
         </div>
 
-        <div className="rounded-[32px] bg-primary/5 p-8 shadow-[0_20px_45px_rgba(0,71,141,0.08)] border border-primary/10">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-3xl bg-primary text-white p-3">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-white/80 font-semibold">Staff Snapshot</p>
-              <h2 className="text-2xl font-extrabold text-white mt-2">Operational insight</h2>
-            </div>
-          </div>
-          <p className="text-sm leading-relaxed text-white/85">
-            The admin dashboard is designed to support quick hospital workflows without altering existing Aadhaar OCR or registration screens. Use the Registration tab to continue processing patient documents.
-          </p>
+        {/* 4 Prominent Stat Cards */}
+        <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+          {cards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.label}
+                className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group"
+              >
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <span className="text-xs uppercase tracking-wider text-gray-500 font-bold">
+                    {card.label}
+                  </span>
+                  <div className={`rounded-xl p-2.5 border ${card.accent} transition-transform group-hover:scale-110 duration-200`}>
+                    <Icon className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <p className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                    {card.value}
+                  </p>
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${card.badge}`}>
+                    Live
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-gray-500 font-medium">
+                  {card.subtext}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      <section className="rounded-[32px] bg-white border border-outline-variant/10 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+      {/* Recent Registrations Section */}
+      <section className="rounded-3xl bg-white border border-gray-200/80 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-on-surface-variant font-semibold">Recent Registrations</p>
-            <h2 className="mt-2 text-2xl font-extrabold text-on-surface">Latest aadhaar patients</h2>
+            <p className="text-xs uppercase tracking-[0.25em] text-blue-600 font-bold">Recent Registrations</p>
+            <h2 className="mt-1 text-2xl font-extrabold text-gray-900">Latest aadhaar patients</h2>
           </div>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-full border border-outline-variant/60 px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest transition-all"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
           >
-            <Activity className="w-4 h-4" />
+            <Activity className="w-4 h-4 text-blue-600" />
             Refresh
           </button>
         </div>
 
         {isLoading ? (
-          <div className="rounded-3xl border border-dashed border-outline-variant/70 p-10 text-center text-on-surface-variant">Loading dashboard data…</div>
+          <div className="rounded-2xl border border-dashed border-gray-300 p-10 text-center text-gray-500 font-medium">Loading dashboard data…</div>
         ) : error ? (
-          <div className="rounded-3xl border border-error-container bg-error-container/10 p-8 text-sm text-on-error-container">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700 font-medium">
             {error}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-separate border-spacing-y-3">
+          <div className="overflow-x-auto rounded-2xl border border-gray-200/80 shadow-sm">
+            <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-[0.28em] text-on-surface-variant">
-                  <th className="px-4 py-3">Patient Name</th>
-                  <th className="px-4 py-3">Aadhaar Number</th>
-                  <th className="px-4 py-3">Registered At</th>
-                  <th className="px-4 py-3">Status</th>
+                <tr className="bg-gradient-to-r from-blue-700 to-blue-600 text-white text-xs font-bold uppercase tracking-wider">
+                  <th className="px-6 py-4 border-b border-blue-800/40">Patient Name</th>
+                  <th className="px-6 py-4 border-b border-blue-800/40">Aadhaar Number</th>
+                  <th className="px-6 py-4 border-b border-blue-800/40">Registered At</th>
+                  <th className="px-6 py-4 border-b border-blue-800/40">Status</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200/70 text-sm text-gray-700">
                 {stats.recentRegistrations.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-sm text-on-surface-variant">
+                    <td colSpan="4" className="px-6 py-8 text-center text-sm text-gray-500 bg-gray-50/30">
                       No recent registrations yet.
                     </td>
                   </tr>
-                ) : stats.recentRegistrations.map((patient) => (
-                  <tr key={patient.id} className="border border-outline-variant/10 rounded-[28px] bg-surface-container-lowest">
-                    <td className="px-4 py-4 text-sm font-medium text-on-surface">{patient.fullName}</td>
-                    <td className="px-4 py-4 text-sm text-on-surface-variant">{patient.aadhaarNumber}</td>
-                    <td className="px-4 py-4 text-sm text-on-surface-variant">{formatDateTime(patient.createdAt)}</td>
-                    <td className="px-4 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-semibold ${patient.status === 'New' ? 'bg-success-gradient/10 text-success-gradient' : 'bg-surface-container-highest text-on-surface-variant'}`}>
+                ) : stats.recentRegistrations.map((patient, index) => (
+                  <tr
+                    key={patient.id}
+                    className={`transition-colors hover:bg-blue-50/60 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/20"}`}
+                  >
+                    <td className="px-6 py-4 font-semibold text-gray-900">{patient.fullName}</td>
+                    <td className="px-6 py-4 font-mono text-gray-600">{maskAadhaar(patient.aadhaarNumber)}</td>
+                    <td className="px-6 py-4 text-gray-600">{formatDateTime(patient.createdAt)}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${patient.status === 'New'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                        : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                        }`}>
                         {patient.status}
                       </span>
                     </td>

@@ -35,3 +35,7 @@ build/
 Thumbs.db
 db.json
 .DS_Store
+
+# Google Cloud Vision key
+vision-key.json
+backend/vision-key.json

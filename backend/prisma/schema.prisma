@@ -14,6 +14,36 @@ enum Role {
   ADMIN
   RECEPTIONIST
   DOCTOR
+  PATIENT
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum ConsultationStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum PrescriptionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 model Patient {
@@ -23,8 +53,15 @@ model Patient {
   dob           String
   gender        String
   aadhaarNumber String   @unique
+  mobile        String?
   address       String
   createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  user          PatientUser?
+  appointments  Appointment[]
+  consultations Consultation[]
+  prescriptions Prescription[]
 }
 
 model Admin {
@@ -34,5 +71,151 @@ model Admin {
   name      String?
   role      Role     @default(RECEPTIONIST)
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  doctorProfile Doctor?
 }
 
+model Doctor {
+  id              String   @id @default(uuid())
+  adminId         String   @unique
+  admin           Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  specialization  String
+  qualification   String
+  department      String
+  roomNumber      String?
+  consultationFee Float    @default(500.0)
+  isActive        Boolean  @default(true)
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  schedules        DoctorSchedule[]
+  unavailabilities DoctorUnavailability[]
+  appointments     Appointment[]
+  consultations    Consultation[]
+  prescriptions    Prescription[]
+}
+
+model DoctorSchedule {
+  id           String    @id @default(uuid())
+  doctorId     String
+  doctor       Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  dayOfWeek    DayOfWeek
+  startTime    String
+  endTime      String
+  slotDuration Int       @default(30)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([doctorId])
+  @@index([doctorId, dayOfWeek, isActive])
+}
+
+model DoctorUnavailability {
+  id        String   @id @default(uuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([doctorId, startTime, endTime])
+}
+
+model PatientUser {
+  id        String    @id @default(uuid())
+  patientId String    @unique
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  password  String
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([patientId])
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  appointmentId   String            @unique
+  patientId       String
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId        String
+  doctor          Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentDate DateTime
+  endTime         DateTime
+  status          AppointmentStatus @default(SCHEDULED)
+  symptoms        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  consultation Consultation?
+
+  @@index([patientId])
+  @@index([doctorId, appointmentDate, status])
+  @@index([status])
+}
+
+model Consultation {
+  id            String             @id @default(uuid())
+  appointmentId String             @unique
+  appointment   Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patientId     String
+  patient       Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId      String
+  doctor        Doctor             @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  symptoms      String?
+  diagnosis     String
+  vitals        String?
+  clinicalNotes String?
+  status        ConsultationStatus @default(IN_PROGRESS)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  prescription Prescription?
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([appointmentId])
+}
+
+model Prescription {
+  id             String             @id @default(uuid())
+  prescriptionId String             @unique
+  consultationId String             @unique
+  consultation   Consultation       @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  patientId      String
+  patient        Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId       String
+  doctor         Doctor             @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  advice         String?
+  followUpDate   DateTime?
+  status         PrescriptionStatus @default(ACTIVE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  items PrescriptionItem[]
+
+  @@index([patientId])
+  @@index([doctorId])
+  @@index([consultationId])
+}
+
+model PrescriptionItem {
+  id             String       @id @default(uuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicineName   String
+  dosage         String
+  frequency      String
+  duration       String
+  instructions   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([prescriptionId])
+}

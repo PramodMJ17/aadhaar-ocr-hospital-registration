@@ -17,6 +17,7 @@ const INITIAL_PATIENT_DATA = {
   dob: '',
   gender: '',
   aadhaarNumber: '',
+  mobile: '',
   address: '',
 };
 
@@ -123,6 +124,7 @@ export default function App() {
     dob: updatedData.dob || '',
     gender: updatedData.gender || '',
     aadhaarNumber: updatedData.aadhaarNumber || '',
+    mobile: updatedData.mobile || '',
     address: updatedData.address || '',
   };
 

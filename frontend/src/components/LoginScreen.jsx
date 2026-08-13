@@ -58,11 +58,11 @@ export default function LoginScreen({ onLoginSuccess }) {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="w-20 h-20 bg-surface-container-lowest rounded-2xl flex items-center justify-center ambient-shadow mb-4 border border-outline-variant/10"
           >
-            <img src={logo} alt="PES University" className="w-16 h-16 object-contain" />
+            <img src={logo} alt="Ramaiah Memorial Hospital" className="w-16 h-16 object-contain" />
           </motion.div>
           
           <h1 className="text-3xl font-extrabold text-primary tracking-tight font-headline">
-            PESU Hospital
+            Ramaiah Memorial Hospital
           </h1>
           <p className="text-on-surface-variant font-medium text-sm mt-1.5 uppercase tracking-widest font-sans">
             Aadhaar OCR Operator Portal

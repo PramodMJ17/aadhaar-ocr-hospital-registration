@@ -8,6 +8,7 @@ export default function ReviewScreen({ data, image, onNext, onBack }) {
     aadhaarNumber: data.aadhaarNumber || '',
     dob: data.dob || '',
     gender: data.gender || '',
+    mobile: data.mobile || '',
     address: data.address || '',
   });
 
@@ -119,7 +120,7 @@ export default function ReviewScreen({ data, image, onNext, onBack }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Gender</label>
                 <select 
@@ -131,7 +132,18 @@ export default function ReviewScreen({ data, image, onNext, onBack }) {
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
+                  <option value="Not found">Not found</option>
                 </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-on-surface-variant/60 uppercase tracking-wider">Mobile Number</label>
+                <input 
+                  name="mobile"
+                  className="w-full bg-surface-container-highest border-none rounded-lg px-4 py-3 text-on-surface font-headline font-semibold focus:ring-2 focus:ring-primary"
+                  type="text" 
+                  value={formData.mobile}
+                  onChange={handleChange}
+                />
               </div>
             </div>
 
