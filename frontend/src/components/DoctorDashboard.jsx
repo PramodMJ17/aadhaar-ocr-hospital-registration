@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Stethoscope, Calendar, Clock, UserCheck, Activity, Award, CheckCircle2, AlertCircle, CalendarDays, FileText } from 'lucide-react';
+import { Stethoscope, Calendar, Clock, UserCheck, Activity, Award, CheckCircle2, AlertCircle, CalendarDays, FileText, Eye, X, Pill, HeartPulse } from 'lucide-react';
 import DoctorConsultationForm from './DoctorConsultationForm';
+import { fetchPatientConsultations, updateAppointmentStatus } from '../services/apiService';
 
 const BACKEND_URL = 'http://localhost:5000';
 
@@ -8,10 +9,12 @@ function formatDateTime(isoString) {
   if (!isoString) return 'N/A';
   const date = new Date(isoString);
   return date.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: true
   });
 }
 
@@ -20,6 +23,12 @@ export default function DoctorDashboard({ user, token, onError }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeConsultationAppointment, setActiveConsultationAppointment] = useState(null);
+
+  // History modal state
+  const [viewHistoryPatient, setViewHistoryPatient] = useState(null);
+  const [patientHistoryList, setPatientHistoryList] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState('');
 
   const fetchDoctorAppointments = async () => {
     setIsLoading(true);
@@ -46,9 +55,36 @@ export default function DoctorDashboard({ user, token, onError }) {
     }
   };
 
+  const handleMarkConsultationDone = async (appointmentId) => {
+    try {
+      await updateAppointmentStatus(appointmentId, 'COMPLETED', token);
+      await fetchDoctorAppointments();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to mark consultation complete.';
+      setError(msg);
+      onError?.(msg);
+    }
+  };
+
   useEffect(() => {
     fetchDoctorAppointments();
   }, [token]);
+
+  const handleOpenPatientHistory = async (patient) => {
+    if (!patient || !patient.id) return;
+    setViewHistoryPatient(patient);
+    setIsLoadingHistory(true);
+    setHistoryError('');
+    try {
+      const data = await fetchPatientConsultations(patient.id, token);
+      setPatientHistoryList(data.consultations || []);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load patient history.';
+      setHistoryError(msg);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   const scheduledCount = appointments.filter(a => a.status === 'SCHEDULED' || a.status === 'CONFIRMED').length;
   const completedCount = appointments.filter(a => a.status === 'COMPLETED').length;
@@ -194,19 +230,38 @@ export default function DoctorDashboard({ user, token, onError }) {
                           {apt.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-6 py-4 text-center space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPatientHistory(apt.patient)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition-all"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-gray-600" />
+                          Records
+                        </button>
+
                         {!isCompleted ? (
-                          <button
-                            type="button"
-                            onClick={() => setActiveConsultationAppointment(apt)}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 primary-gradient text-white rounded-lg text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
-                          >
-                            <Stethoscope className="w-3.5 h-3.5" />
-                            Start Consultation
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setActiveConsultationAppointment(apt)}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 primary-gradient text-white rounded-lg text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                            >
+                              <Stethoscope className="w-3.5 h-3.5" />
+                              Consultation
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMarkConsultationDone(apt.id)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-all ml-1"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Mark Done
+                            </button>
+                          </>
                         ) : (
-                          <span className="text-xs font-semibold text-emerald-700 flex items-center justify-center gap-1">
-                            <CheckCircle2 className="w-4 h-4" /> Consultation Complete
+                          <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200 inline-flex items-center gap-1 ml-2">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Consultation Done
                           </span>
                         )}
                       </td>
@@ -219,9 +274,10 @@ export default function DoctorDashboard({ user, token, onError }) {
         )}
       </section>
 
-      {/* Consultation Modal */}
+      {/* Consultation Form Modal */}
       {activeConsultationAppointment && (
         <DoctorConsultationForm
+          key={activeConsultationAppointment.id}
           appointment={activeConsultationAppointment}
           token={token}
           onClose={() => setActiveConsultationAppointment(null)}
@@ -230,6 +286,112 @@ export default function DoctorDashboard({ user, token, onError }) {
             await fetchDoctorAppointments();
           }}
         />
+      )}
+
+      {/* Assigned Patient History & Records Modal */}
+      {viewHistoryPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 relative border border-gray-100 space-y-6 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold font-headline text-gray-900">Assigned Patient Records</h2>
+                  <p className="text-xs text-gray-500 font-medium">{viewHistoryPatient.fullName} • Hospital ID: {viewHistoryPatient.hospitalId}</p>
+                </div>
+              </div>
+              <button onClick={() => setViewHistoryPatient(null)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {isLoadingHistory ? (
+              <div className="py-12 text-center text-xs text-gray-400 italic">Loading patient medical history...</div>
+            ) : historyError ? (
+              <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-2xl">{historyError}</div>
+            ) : patientHistoryList.length === 0 ? (
+              <div className="py-10 text-center text-gray-500 text-xs font-medium bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                No previous clinical consultations found for this assigned patient.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {patientHistoryList.map((cons) => {
+                  let vitals = {};
+                  try {
+                    vitals = typeof cons.vitals === 'string' ? JSON.parse(cons.vitals) : (cons.vitals || {});
+                  } catch (e) {
+                    vitals = {};
+                  }
+                  const rxItems = cons.prescription?.items || [];
+
+                  return (
+                    <div key={cons.id} className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+                          {cons.diagnosis || 'Clinical Consultation'}
+                        </span>
+                        <span className="text-xs text-gray-500">{new Date(cons.createdAt).toLocaleDateString()}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="p-2 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 font-bold uppercase text-[10px]">BP</span>
+                          <p className="font-bold text-gray-800">{vitals.bp || 'N/A'}</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 font-bold uppercase text-[10px]">Pulse</span>
+                          <p className="font-bold text-gray-800">{vitals.pulse ? `${vitals.pulse} bpm` : 'N/A'}</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 font-bold uppercase text-[10px]">Temp</span>
+                          <p className="font-bold text-gray-800">{vitals.temp ? `${vitals.temp} °F` : 'N/A'}</p>
+                        </div>
+                        <div className="p-2 bg-gray-50 rounded-xl">
+                          <span className="text-gray-400 font-bold uppercase text-[10px]">Weight</span>
+                          <p className="font-bold text-gray-800">{vitals.weight ? `${vitals.weight} kg` : 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      {cons.clinicalNotes && (
+                        <div className="text-xs text-gray-700 bg-gray-50/70 p-3 rounded-xl">
+                          <span className="font-bold text-gray-900 block mb-1">Clinical Notes:</span>
+                          {cons.clinicalNotes}
+                        </div>
+                      )}
+
+                      {rxItems.length > 0 && (
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1">
+                            <Pill className="w-3.5 h-3.5 text-emerald-600" /> Prescribed Medicines ({rxItems.length})
+                          </span>
+                          <div className="divide-y divide-gray-100 bg-emerald-50/30 rounded-xl p-3 text-xs border border-emerald-100">
+                            {rxItems.map((it, i) => (
+                              <div key={i} className="py-1.5 flex justify-between items-center text-gray-800 font-medium">
+                                <span className="font-bold">{it.medicineName} ({it.dosage})</span>
+                                <span className="text-gray-500 font-mono">{it.frequency} • {it.duration}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setViewHistoryPatient(null)}
+                className="px-6 py-2 bg-gray-900 text-white text-xs font-bold rounded-xl shadow-md hover:bg-gray-800"
+              >
+                Close Records
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

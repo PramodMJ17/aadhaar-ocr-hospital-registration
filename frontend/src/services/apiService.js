@@ -93,13 +93,30 @@ export async function fetchAdminDashboard(token) {
   return data;
 }
 
-export async function fetchPatientsList(token, page = 1, limit = 10) {
-  const response = await fetch(`${BACKEND_URL}/patients?page=${page}&limit=${limit}`, {
+export async function fetchPatientsList(token, page = 1, limit = 10, search = '') {
+  const queryParam = search ? `&search=${encodeURIComponent(search)}` : '';
+  const response = await fetch(`${BACKEND_URL}/patients?page=${page}&limit=${limit}${queryParam}`, {
     headers: { 'Authorization': token ? `Bearer ${token}` : '' }
   });
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || 'Failed to fetch patients history.');
+  }
+  return data;
+}
+
+export async function updatePatientDetails(patientId, updateData, token) {
+  const response = await fetch(`${BACKEND_URL}/patients/${patientId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(updateData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update patient details.');
   }
   return data;
 }
@@ -346,6 +363,44 @@ export async function fetchPrescriptionDetails(id, token) {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || 'Failed to fetch prescription details.');
+  }
+  return data;
+}
+
+export async function createReceptionist(receptionistData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/auth/receptionist`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(receptionistData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to create receptionist account.');
+  }
+  return data;
+}
+
+export async function fetchReceptionists(token) {
+  const response = await fetch(`${BACKEND_URL}/api/auth/receptionists`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch receptionists list.');
+  }
+  return data;
+}
+
+export async function fetchPatientConsultations(patientId, token) {
+  const response = await fetch(`${BACKEND_URL}/api/consultations/patient/${patientId}`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch patient consultations history.');
   }
   return data;
 }

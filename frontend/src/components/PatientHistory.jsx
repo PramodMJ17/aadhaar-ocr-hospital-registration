@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Search, Eye, Users, ChevronLeft, ChevronRight, X, Calendar, MapPin, User, FileText, KeyRound, CheckCircle2, AlertCircle, Lock } from "lucide-react";
-import { grantPatientPortalAccess, fetchPatientsList } from "../services/apiService";
+import { Search, Eye, Users, ChevronLeft, ChevronRight, X, Calendar, MapPin, User, FileText, KeyRound, CheckCircle2, AlertCircle, Lock, Phone, Edit3 } from "lucide-react";
+import { grantPatientPortalAccess, fetchPatientsList, updatePatientDetails } from "../services/apiService";
 
 const maskAadhaar = (aadhaar) => {
   if (!aadhaar) return "";
@@ -25,21 +25,34 @@ export default function PatientHistory() {
   const [isSubmittingGrant, setIsSubmittingGrant] = useState(false);
   const [grantMessage, setGrantMessage] = useState({ text: "", type: "" });
 
-  useEffect(() => {
-    fetchPatients();
-  }, [page]);
+  // Edit Patient Modal state
+  const [editingPatient, setEditingPatient] = useState(null);
+  const [editMobile, setEditMobile] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [editMessage, setEditMessage] = useState({ text: "", type: "" });
 
-  const fetchPatients = async () => {
+  useEffect(() => {
+    fetchPatients(page, searchTerm);
+  }, [page, searchTerm]);
+
+  const fetchPatients = async (queryPage = page, querySearch = searchTerm) => {
     try {
       const token = localStorage.getItem('token');
-      const data = await fetchPatientsList(token, page, 10);
+      const data = await fetchPatientsList(token, queryPage, 10, querySearch);
 
       setPatients(data.patients || []);
       setTotalPages(data.totalPages || 1);
-      setTotalPatients(data.totalPatients || (data.patients ? data.patients.length : 0));
+      setTotalPatients(data.totalPatients || 0);
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1);
   };
 
   const handleGrantSubmit = async (e) => {
@@ -52,7 +65,7 @@ export default function PatientHistory() {
       await grantPatientPortalAccess(grantingPatient.hospitalId, grantPassword, token);
       setGrantMessage({ text: "Patient portal account activated successfully!", type: "success" });
       setGrantPassword("");
-      await fetchPatients();
+      await fetchPatients(page, searchTerm);
       setTimeout(() => {
         setGrantingPatient(null);
         setGrantMessage({ text: "", type: "" });
@@ -65,19 +78,47 @@ export default function PatientHistory() {
     }
   };
 
-  const filteredPatients = patients.filter((patient) => {
-    const search = searchTerm.toLowerCase();
+  const handleEditOpen = (patient) => {
+    setEditingPatient(patient);
+    setEditMobile(patient.mobile || "");
+    setEditFullName(patient.fullName || "");
+    setEditAddress(patient.address || "");
+    setEditMessage({ text: "", type: "" });
+  };
 
-    return (
-      patient.hospitalId.toLowerCase().includes(search) ||
-      patient.fullName.toLowerCase().includes(search) ||
-      patient.aadhaarNumber.toLowerCase().includes(search)
-    );
-  });
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingPatient) return;
+    setIsSubmittingEdit(true);
+    setEditMessage({ text: "", type: "" });
+    try {
+      const token = localStorage.getItem('token');
+      const updatedRes = await updatePatientDetails(editingPatient.id, {
+        mobile: editMobile,
+        fullName: editFullName,
+        address: editAddress
+      }, token);
+
+      setEditMessage({ text: "Patient details updated successfully!", type: "success" });
+      await fetchPatients(page, searchTerm);
+      if (selectedPatient && selectedPatient.id === editingPatient.id) {
+        setSelectedPatient(updatedRes.patient);
+      }
+      setTimeout(() => {
+        setEditingPatient(null);
+        setEditMessage({ text: "", type: "" });
+      }, 1200);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update patient details.";
+      setEditMessage({ text: msg, type: "error" });
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
 
   const limit = 10;
-  const startCount = totalPatients === 0 || filteredPatients.length === 0 ? 0 : (page - 1) * limit + 1;
-  const endCount = totalPatients === 0 || filteredPatients.length === 0 ? 0 : Math.min(page * limit, totalPatients);
+  const startCount = totalPatients === 0 || patients.length === 0 ? 0 : (page - 1) * limit + 1;
+  const endCount = totalPatients === 0 || patients.length === 0 ? 0 : Math.min(page * limit, totalPatients);
 
   return (
     <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto space-y-6">
@@ -93,60 +134,57 @@ export default function PatientHistory() {
                 Patient History & Access Manager
               </h1>
               <p className="text-sm text-gray-500 mt-0.5">
-                View registered patients and grant patient portal access.
+                Search registered patients, update contact info, and grant portal access.
               </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-start md:self-auto">
-          <span className="bg-blue-50 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-200/60 shadow-sm">
-            Total Patients: {totalPatients}
-          </span>
-        </div>
-      </div>
 
-      {/* Controls Section: Search */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-sm">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800 font-headline">Patient Directory</h2>
-          <p className="text-xs text-gray-500">Search by Hospital ID, Name, or Aadhaar number</p>
-        </div>
-        <div className="relative w-full sm:w-80 md:w-96">
+        {/* Global Search Bar */}
+        <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Hospital ID, Name or Aadhaar..."
+            placeholder="Search Hospital ID, Name, Aadhaar, Mobile..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-300/80 text-sm text-gray-900 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-gray-400"
+            onChange={handleSearchChange}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-xs sm:text-sm font-medium outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 shadow-2xs transition-all"
           />
+          {searchTerm && (
+            <button
+              onClick={() => { setSearchTerm(''); setPage(1); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200/80 overflow-hidden">
+      {/* Main Table Card */}
+      <div className="bg-white rounded-3xl border border-gray-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[750px]">
-            <thead>
-              <tr className="bg-gradient-to-r from-blue-700 to-blue-600 text-white text-xs font-bold uppercase tracking-wider">
-                <th className="px-6 py-4 border-b border-blue-800/40">Hospital ID</th>
-                <th className="px-6 py-4 border-b border-blue-800/40">Full Name</th>
-                <th className="px-6 py-4 border-b border-blue-800/40">Aadhaar</th>
-                <th className="px-6 py-4 border-b border-blue-800/40">Portal Status</th>
-                <th className="px-6 py-4 border-b border-blue-800/40">Registered On</th>
-                <th className="px-6 py-4 border-b border-blue-800/40 text-center">Actions</th>
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead className="bg-gray-50/80 text-gray-500 font-bold uppercase tracking-wider text-[11px] border-b border-gray-200/80">
+              <tr>
+                <th className="px-6 py-4">Hospital ID</th>
+                <th className="px-6 py-4">Full Name</th>
+                <th className="px-6 py-4">Mobile No.</th>
+                <th className="px-6 py-4">Aadhaar</th>
+                <th className="px-6 py-4">Portal Status</th>
+                <th className="px-6 py-4">Registered Date</th>
+                <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-
-            <tbody className="divide-y divide-gray-200/70 text-sm text-gray-700">
-              {filteredPatients.length === 0 ? (
+            <tbody className="divide-y divide-gray-100 font-medium">
+              {patients.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500 bg-gray-50/30">
+                  <td colSpan="7" className="px-6 py-12 text-center text-gray-400 italic">
                     No matching patient records found.
                   </td>
                 </tr>
               ) : (
-                filteredPatients.map((patient, index) => {
+                patients.map((patient, index) => {
                   const hasPortalAccess = !!patient.user;
                   return (
                     <tr
@@ -158,6 +196,9 @@ export default function PatientHistory() {
                       </td>
                       <td className="px-6 py-4 font-semibold text-gray-900">
                         {patient.fullName}
+                      </td>
+                      <td className="px-6 py-4 font-mono text-gray-700 font-semibold">
+                        {patient.mobile || "Not recorded"}
                       </td>
                       <td className="px-6 py-4 font-mono text-gray-600">
                         {maskAadhaar(patient.aadhaarNumber)}
@@ -182,6 +223,14 @@ export default function PatientHistory() {
                         >
                           <Eye className="w-3.5 h-3.5" />
                           View
+                        </button>
+
+                        <button
+                          onClick={() => handleEditOpen(patient)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold border border-gray-300 transition-all"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          Edit
                         </button>
 
                         {!hasPortalAccess && (
@@ -223,7 +272,7 @@ export default function PatientHistory() {
             </span>
 
             <button
-              disabled={page === totalPages}
+              disabled={page === totalPages || totalPages === 0}
               onClick={() => setPage(page + 1)}
               className="inline-flex items-center gap-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-xl text-xs sm:text-sm shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
@@ -301,6 +350,82 @@ export default function PatientHistory() {
         </div>
       )}
 
+      {/* Edit Patient Contact Modal */}
+      {editingPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 relative border border-gray-100 space-y-5">
+            <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2 text-blue-700 font-bold font-headline">
+                <Edit3 className="w-5 h-5" />
+                <h2>Edit Patient Information</h2>
+              </div>
+              <button onClick={() => setEditingPatient(null)} className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editMessage.text && (
+              <div className={`p-3 rounded-xl text-xs font-medium ${
+                editMessage.type === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+              }`}>
+                {editMessage.text}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="space-y-4 text-xs font-medium">
+              <div>
+                <label className="block text-gray-500 font-bold uppercase mb-1">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl outline-none focus:border-blue-600 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-500 font-bold uppercase mb-1">Mobile Number</label>
+                <input
+                  type="text"
+                  value={editMobile}
+                  onChange={(e) => setEditMobile(e.target.value)}
+                  placeholder="e.g. 9876543210"
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl outline-none focus:border-blue-600 text-sm font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-500 font-bold uppercase mb-1">Address</label>
+                <textarea
+                  rows="2"
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl outline-none focus:border-blue-600 text-xs"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingPatient(null)}
+                  className="px-5 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdit}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md hover:scale-105 active:scale-95 transition-all"
+                >
+                  {isSubmittingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Patient Details Modal */}
       {selectedPatient && (
         <div
@@ -353,6 +478,22 @@ export default function PatientHistory() {
 
               <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
                 <span className="text-xs uppercase tracking-wider text-gray-500 font-bold flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-blue-600" />
+                  Mobile No.
+                </span>
+                <span className="col-span-2 font-mono font-bold text-gray-900">{selectedPatient.mobile || "Not recorded"}</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
+                <span className="text-xs uppercase tracking-wider text-gray-500 font-bold flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-blue-600" />
+                  Gender
+                </span>
+                <span className="col-span-2 font-semibold text-gray-900">{selectedPatient.gender || "Not recorded"}</span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-gray-50/70 border border-gray-100">
+                <span className="text-xs uppercase tracking-wider text-gray-500 font-bold flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-blue-600" />
                   Aadhaar
                 </span>
@@ -391,7 +532,15 @@ export default function PatientHistory() {
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-2 flex justify-between items-center">
+            <div className="pt-2 flex justify-between items-center gap-2">
+              <button
+                onClick={() => handleEditOpen(selectedPatient)}
+                className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold rounded-xl text-xs border border-blue-200 transition-all flex items-center gap-1"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                Edit Info
+              </button>
+
               {!selectedPatient.user && (
                 <button
                   onClick={() => {

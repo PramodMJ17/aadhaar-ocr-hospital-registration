@@ -11,6 +11,8 @@ import SuccessScreen from './components/SuccessScreen';
 import Dashboard from './components/Dashboard';
 import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
+import ReceptionDashboard from './components/ReceptionDashboard';
+import ReceptionManagement from './components/ReceptionManagement';
 import DoctorManagement from './components/DoctorManagement';
 import DoctorScheduleManager from './components/DoctorScheduleManager';
 import PatientAppointmentBooking from './components/PatientAppointmentBooking';
@@ -34,6 +36,7 @@ function getInitialStep(token, user) {
   const role = user?.role || 'ADMIN';
   if (role === 'DOCTOR') return 'doctor-dashboard';
   if (role === 'PATIENT') return 'patient-dashboard';
+  if (role === 'RECEPTIONIST') return 'reception-dashboard';
   return 'dashboard';
 }
 
@@ -105,16 +108,40 @@ export default function App() {
   };
 
   const handleNavigate = (destination) => {
+    const userRole = user?.role || 'ADMIN';
+
+    // Front-end Route Guards
+    if (userRole === 'RECEPTIONIST') {
+      if (['reception-dashboard', 'upload', 'history', 'scanning', 'review', 'success'].includes(destination)) {
+        setStep(destination);
+      }
+      return;
+    }
+
+    if (userRole === 'DOCTOR') {
+      if (destination === 'doctor-dashboard') setStep(destination);
+      return;
+    }
+
+    if (userRole === 'PATIENT') {
+      if (['patient-dashboard', 'book-appointment', 'my-records'].includes(destination)) {
+        setStep(destination);
+      }
+      return;
+    }
+
+    // ADMIN Role
     if ([
       "dashboard", "upload", "history",
-      "doctor-dashboard", "patient-dashboard",
-      "doctors", "schedules", "book-appointment", "my-records"
+      "doctors", "schedules", "reception-management",
+      "scanning", "review", "success"
     ].includes(destination)) {
       setStep(destination);
     }
   };
 
   const handleNavigateDoctorSchedule = (doctorId) => {
+    if (user?.role !== 'ADMIN') return;
     setTargetDoctorId(doctorId);
     setStep('schedules');
   };
@@ -201,7 +228,7 @@ export default function App() {
   return (
     <Layout 
       currentStep={step} 
-      onBack={step !== 'upload' && step !== 'dashboard' && step !== 'doctor-dashboard' && step !== 'patient-dashboard' ? handleBack : undefined}
+      onBack={step !== 'upload' && step !== 'dashboard' && step !== 'doctor-dashboard' && step !== 'patient-dashboard' && step !== 'reception-dashboard' ? handleBack : undefined}
       onNavigate={handleNavigate}
       user={user}
       admin={user}
@@ -211,6 +238,23 @@ export default function App() {
     >
       {step === 'dashboard' && (
         <Dashboard
+          token={token}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'reception-dashboard' && (
+        <ReceptionDashboard
+          user={user}
+          token={token}
+          onNavigateRegistration={() => setStep('upload')}
+          onNavigateHistory={() => setStep('history')}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'reception-management' && (
+        <ReceptionManagement
           token={token}
           onError={(message) => showNotification(message, 'error')}
         />
@@ -261,6 +305,7 @@ export default function App() {
       {step === 'my-records' && (
         <PatientMedicalHistory
           token={token}
+          user={user}
         />
       )}
 

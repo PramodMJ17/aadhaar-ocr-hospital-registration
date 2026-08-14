@@ -85,6 +85,50 @@ router.post('/', authenticateToken, authorizeRole(['DOCTOR', 'ADMIN']), async (r
   }
 });
 
+// GET /api/consultations/patient/:patientId — Fetch consultations for a patient
+// DOCTOR role can ONLY view history for assigned patients; PATIENT role can ONLY view own history.
+router.get('/patient/:patientId', authenticateToken, async (req, res) => {
+  try {
+    const prisma = getPrisma(req);
+    if (!prisma) return res.status(503).json({ error: 'Database service unavailable.' });
+
+    const { patientId } = req.params;
+
+    // RBAC Security Checks
+    if (req.user.role === 'PATIENT' && req.user.patientId !== patientId) {
+      return res.status(403).json({ error: 'Access denied. Patients can only access their own medical records.' });
+    }
+
+    if (req.user.role === 'DOCTOR') {
+      const doctor = await prisma.doctor.findUnique({ where: { adminId: req.user.id } });
+      if (!doctor) return res.status(403).json({ error: 'Forbidden. Doctor profile not found.' });
+
+      const assignedAppointment = await prisma.appointment.findFirst({
+        where: { doctorId: doctor.id, patientId }
+      });
+
+      if (!assignedAppointment) {
+        return res.status(403).json({ error: 'Access denied. You can only view medical history for patients assigned to you.' });
+      }
+    }
+
+    const consultations = await prisma.consultation.findMany({
+      where: { patientId },
+      include: {
+        doctor: { include: { admin: { select: { name: true } } } },
+        appointment: { select: { appointmentId: true, appointmentDate: true } },
+        prescription: { include: { items: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({ consultations });
+  } catch (error) {
+    console.error('Error fetching patient consultations:', error);
+    return res.status(500).json({ error: 'Failed to fetch patient consultations.' });
+  }
+});
+
 // GET /api/consultations/:id — Fetch consultation details
 router.get('/:id', authenticateToken, async (req, res) => {
   try {

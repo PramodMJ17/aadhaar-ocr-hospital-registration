@@ -37,6 +37,8 @@ export default function DoctorManagement({ token, onNavigateSchedule, onError })
     isAvailable: true
   });
 
+  const [successMessage, setSuccessMessage] = useState('');
+
   const loadDoctors = async () => {
     setIsLoading(true);
     setError('');
@@ -59,8 +61,12 @@ export default function DoctorManagement({ token, onNavigateSchedule, onError })
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     try {
-      await createDoctor(newDoctor, token);
+      const res = await createDoctor(newDoctor, token);
+      const createdUsername = res.doctor?.admin?.username || newDoctor.username;
+      const createdName = res.doctor?.admin?.name || newDoctor.name;
+      setSuccessMessage(`Doctor staff account created successfully for ${createdName} (@${createdUsername}). Assigned Role: DOCTOR.`);
       setShowCreateModal(false);
       setNewDoctor({
         username: '',
@@ -139,9 +145,20 @@ export default function DoctorManagement({ token, onNavigateSchedule, onError })
           className="inline-flex items-center gap-2 primary-gradient text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all self-start md:self-auto"
         >
           <UserPlus className="w-4 h-4" />
-          Create Doctor Account
         </button>
       </div>
+
+      {successMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl p-4 text-xs font-semibold flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage('')} className="text-emerald-700 hover:text-emerald-900 p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/80 shadow-sm">

@@ -1142,7 +1142,7 @@ app.post('/upload', upload.single('image'), (req, res) => {
 // POST /api/register to save patient data
 app.post('/api/register', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST']), async (req, res) => {
   try {
-    const { fullName, dob, gender, aadhaarNumber, address } = req.body;
+    const { fullName, dob, gender, aadhaarNumber, address, mobile } = req.body;
 
     if (!aadhaarNumber) {
       return res.status(400).json({ error: 'Aadhaar Number is required.' });
@@ -1153,7 +1153,7 @@ app.post('/api/register', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONI
       console.warn('⚠️  Registration skipped — database is not connected.');
       return res.status(200).json({
         message: 'Patient data received. Database is currently unavailable — data was not persisted.',
-        patient: { fullName, dob, gender, aadhaarNumber, address },
+        patient: { fullName, dob, gender, aadhaarNumber, address, mobile },
         dbStatus: 'unavailable'
       });
     }
@@ -1185,6 +1185,7 @@ app.post('/api/register', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONI
         dob: dob || '',
         gender: gender || '',
         aadhaarNumber,
+        mobile: mobile || null,
         address: address || ''
       }
     });
@@ -1201,7 +1202,7 @@ app.post('/api/register', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONI
     return res.status(200).json({
       success: false,
       existing: false,
-      patient: { fullName, dob, gender, aadhaarNumber, address },
+      patient: { fullName, dob, gender, aadhaarNumber, address, mobile },
       error: 'An unexpected error occurred while saving patient data.',
       dbStatus: 'error'
     });
@@ -1212,10 +1213,23 @@ app.get("/patients", authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST'])
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search ? String(req.query.search).trim() : '';
 
     const skip = (page - 1) * limit;
 
+    const whereClause = search ? {
+      OR: [
+        { hospitalId: { contains: search, mode: 'insensitive' } },
+        { fullName: { contains: search, mode: 'insensitive' } },
+        { aadhaarNumber: { contains: search, mode: 'insensitive' } },
+        { mobile: { contains: search, mode: 'insensitive' } }
+      ]
+    } : {};
+
+    const totalPatients = await prisma.patient.count({ where: whereClause });
+
     const patients = await prisma.patient.findMany({
+      where: whereClause,
       include: {
         user: {
           select: { id: true, isActive: true, lastLogin: true, createdAt: true }
@@ -1227,8 +1241,6 @@ app.get("/patients", authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST'])
       skip,
       take: limit,
     });
-
-    const totalPatients = await prisma.patient.count();
 
     res.json({
       patients,
@@ -1242,6 +1254,42 @@ app.get("/patients", authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST'])
     res.status(500).json({
       error: "Unable to fetch patients",
     });
+  }
+});
+
+app.put("/patients/:id", authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, mobile, address, dob, gender } = req.body;
+
+    const existing = await prisma.patient.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Patient record not found.' });
+    }
+
+    const updated = await prisma.patient.update({
+      where: { id },
+      data: {
+        fullName: fullName !== undefined ? fullName : existing.fullName,
+        mobile: mobile !== undefined ? mobile : existing.mobile,
+        address: address !== undefined ? address : existing.address,
+        dob: dob !== undefined ? dob : existing.dob,
+        gender: gender !== undefined ? gender : existing.gender
+      },
+      include: {
+        user: {
+          select: { id: true, isActive: true, lastLogin: true, createdAt: true }
+        }
+      }
+    });
+
+    return res.json({
+      message: 'Patient details updated successfully.',
+      patient: updated
+    });
+  } catch (error) {
+    console.error('Error updating patient details:', error);
+    return res.status(500).json({ error: 'Failed to update patient details.' });
   }
 });
 

@@ -530,14 +530,31 @@ router.get('/:id/slots', authenticateToken, async (req, res) => {
       }
     });
 
-    // Generate slots between startTime and endTime
+    // Generate slots between startTime and endTime in Asia/Kolkata (+05:30)
     const [startHH, startMM] = schedule.startTime.split(':').map(Number);
-    const [endHH, endMM] = schedule.endTime.split(':').map(Number);
+    let [endHH, endMM] = schedule.endTime.split(':').map(Number);
     const slotDuration = schedule.slotDuration || 30;
 
     const slots = [];
-    let currentSlotStart = new Date(`${date}T${String(startHH).padStart(2, '0')}:${String(startMM).padStart(2, '0')}:00.000Z`);
-    const dayEndTime = new Date(`${date}T${String(endHH).padStart(2, '0')}:${String(endMM).padStart(2, '0')}:00.000Z`);
+    let currentSlotStart = new Date(`${date}T${String(startHH).padStart(2, '0')}:${String(startMM).padStart(2, '0')}:00+05:30`);
+
+    let dayEndTime;
+    if ((endHH === 0 && endMM === 0) || endHH < startHH) {
+      const nextDay = new Date(new Date(`${date}T00:00:00+05:30`).getTime() + 24 * 3600 * 1000);
+      const nextDayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(nextDay);
+      dayEndTime = new Date(`${nextDayStr}T00:00:00+05:30`);
+    } else {
+      dayEndTime = new Date(`${date}T${String(endHH).padStart(2, '0')}:${String(endMM).padStart(2, '0')}:00+05:30`);
+    }
+
+    const formatTime12HrLocal = (dObj) => {
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      }).format(dObj);
+    };
 
     while (currentSlotStart < dayEndTime) {
       const currentSlotEnd = new Date(currentSlotStart.getTime() + slotDuration * 60 * 1000);
@@ -546,9 +563,7 @@ router.get('/:id/slots', authenticateToken, async (req, res) => {
       const slotStartISO = currentSlotStart.toISOString();
       const slotEndISO = currentSlotEnd.toISOString();
 
-      const time24Start = `${String(currentSlotStart.getUTCHours()).padStart(2, '0')}:${String(currentSlotStart.getUTCMinutes()).padStart(2, '0')}`;
-      const time24End = `${String(currentSlotEnd.getUTCHours()).padStart(2, '0')}:${String(currentSlotEnd.getUTCMinutes()).padStart(2, '0')}`;
-      const label = `${formatTime12Hr(time24Start)} - ${formatTime12Hr(time24End)}`;
+      const label = `${formatTime12HrLocal(currentSlotStart)} - ${formatTime12HrLocal(currentSlotEnd)}`;
 
       let slotStatus = 'AVAILABLE';
       let reason = null;
@@ -576,10 +591,24 @@ router.get('/:id/slots', authenticateToken, async (req, res) => {
         }
       }
 
+      // Check for date/time expiry (Past date or expired/in-progress slot today)
+      if (slotStatus !== 'BOOKED') {
+        const now = new Date();
+        const hospitalToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+        if (date < hospitalToday) {
+          slotStatus = 'UNAVAILABLE';
+          reason = 'Date has passed';
+        } else if (date === hospitalToday && currentSlotStart <= now) {
+          slotStatus = 'UNAVAILABLE';
+          reason = 'Slot expired';
+        }
+      }
+
       slots.push({
         startTime: slotStartISO,
         endTime: slotEndISO,
         timeLabel: label,
+        label,
         status: slotStatus,
         reason
       });

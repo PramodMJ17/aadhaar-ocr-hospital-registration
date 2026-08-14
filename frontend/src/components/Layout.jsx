@@ -24,6 +24,12 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
       { id: 'book-appointment', label: 'Book Appointment' },
       { id: 'my-records', label: 'Medical Records & Rx' },
     ];
+  } else if (userRole === 'RECEPTIONIST') {
+    navItems = [
+      { id: 'reception-dashboard', label: 'Reception Desk' },
+      { id: 'upload', label: 'Registration' },
+      { id: 'history', label: 'Patient Directory' },
+    ];
   } else {
     navItems = [
       { id: 'dashboard', label: 'Dashboard' },
@@ -31,6 +37,7 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
       { id: 'history', label: 'Patient History' },
       { id: 'doctors', label: 'Doctor Staff' },
       { id: 'schedules', label: 'Doctor Schedules' },
+      { id: 'reception-management', label: 'Reception Staff' },
     ];
   }
 

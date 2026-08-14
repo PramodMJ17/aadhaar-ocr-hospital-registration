@@ -3,11 +3,16 @@ import { Calendar, Clock, Stethoscope, Search, CheckCircle2, AlertCircle, User, 
 import { fetchDoctors, fetchDoctorSlots, bookAppointment } from '../services/apiService';
 
 function getTodayString() {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  try {
+    const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' });
+    return formatter.format(new Date());
+  } catch (e) {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 }
 
 export default function PatientAppointmentBooking({ token, onBookingSuccess, onError }) {
@@ -268,7 +273,7 @@ export default function PatientAppointmentBooking({ token, onBookingSuccess, onE
                       onClick={() => setSelectedSlot(slot)}
                       className={`p-3 rounded-2xl border text-xs font-semibold transition-all flex flex-col items-center justify-center gap-1 ${badgeStyle}`}
                     >
-                      <span className="font-mono text-sm">{slot.timeLabel || `${slot.startTime.split('T')[1].substring(0,5)}`}</span>
+                      <span className="font-mono text-sm">{slot.label || slot.timeLabel || `${slot.startTime.split('T')[1].substring(0,5)}`}</span>
                       <span className="text-[10px] uppercase font-bold tracking-wider">{slot.status}</span>
                     </button>
                   );
@@ -281,7 +286,7 @@ export default function PatientAppointmentBooking({ token, onBookingSuccess, onE
           {selectedSlot && (
             <div className="pt-6 border-t border-gray-100 space-y-4 animate-fadeIn">
               <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs space-y-1">
-                <p className="font-bold text-emerald-900 text-sm">Selected Slot: {selectedSlot.timeLabel}</p>
+                <p className="font-bold text-emerald-900 text-sm">Selected Slot: {selectedSlot.label || selectedSlot.timeLabel}</p>
                 <p className="text-emerald-700">Doctor: {selectedDoctor?.admin?.name} ({selectedDoctor?.specialization})</p>
               </div>
 

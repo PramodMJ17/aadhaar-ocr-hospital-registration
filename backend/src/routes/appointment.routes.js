@@ -39,9 +39,12 @@ router.post('/', authenticateToken, authorizeRole(['PATIENT', 'RECEPTIONIST', 'A
       return res.status(400).json({ error: 'Invalid appointmentDate timestamp format.' });
     }
 
-    // 1. Cannot book in the past
-    if (bookingDate < new Date()) {
-      return res.status(400).json({ error: 'Cannot book appointments in the past.' });
+    // 1. Cannot book in past dates
+    const now = new Date();
+    const hospitalToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+    const bookingDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(bookingDate);
+    if (bookingDateStr < hospitalToday) {
+      return res.status(400).json({ error: 'Cannot book appointments for past dates.' });
     }
 
     // 2. Validate Patient existence
@@ -50,7 +53,7 @@ router.post('/', authenticateToken, authorizeRole(['PATIENT', 'RECEPTIONIST', 'A
 
     // 3. Validate Doctor existence & availability
     const doctor = await prisma.doctor.findUnique({ where: { id: doctorId } });
-    if (!doctor) return res.status(404).json({ error: 'Doctor record not found.' });
+    if (!doctor) return res.status(400).json({ error: 'Doctor record cannot be resolved or is invalid.' });
 
     if (!doctor.isActive || !doctor.isAvailable) {
       return res.status(400).json({ error: 'Doctor is currently unavailable for new appointments.' });
@@ -75,13 +78,17 @@ router.post('/', authenticateToken, authorizeRole(['PATIENT', 'RECEPTIONIST', 'A
     const slotDuration = schedule.slotDuration || 30;
     const endTime = new Date(bookingDate.getTime() + slotDuration * 60 * 1000);
 
-    // Build schedule boundary Date objects for requested date
-    const dateISOStr = bookingDate.toISOString().split('T')[0];
+    if (endTime <= now) {
+      return res.status(400).json({ error: 'Cannot book an appointment slot that has already passed.' });
+    }
+
+    // Build schedule boundary Date objects for requested date in Asia/Kolkata (+05:30)
+    const dateISOStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(bookingDate);
     const [startHH, startMM] = schedule.startTime.split(':').map(Number);
     const [endHH, endMM] = schedule.endTime.split(':').map(Number);
 
-    const schedStart = new Date(`${dateISOStr}T${String(startHH).padStart(2, '0')}:${String(startMM).padStart(2, '0')}:00.000Z`);
-    const schedEnd = new Date(`${dateISOStr}T${String(endHH).padStart(2, '0')}:${String(endMM).padStart(2, '0')}:00.000Z`);
+    const schedStart = new Date(`${dateISOStr}T${String(startHH).padStart(2, '0')}:${String(startMM).padStart(2, '0')}:00+05:30`);
+    const schedEnd = new Date(`${dateISOStr}T${String(endHH).padStart(2, '0')}:${String(endMM).padStart(2, '0')}:00+05:30`);
 
     // Verify appointment fits inside doctor's working hours
     if (bookingDate < schedStart || endTime > schedEnd) {
@@ -317,6 +324,17 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
       const doctor = await prisma.doctor.findUnique({ where: { adminId: req.user.id } });
       if (!doctor || doctor.id !== appointment.doctorId) {
         return res.status(403).json({ error: 'Access denied. You are not the assigned doctor for this appointment.' });
+      }
+    }
+
+    if (status === 'COMPLETED') {
+      const consultation = await prisma.consultation.findUnique({
+        where: { appointmentId: id }
+      });
+      if (!consultation) {
+        return res.status(400).json({
+          error: 'Please complete the consultation before marking this appointment as done.'
+        });
       }
     }
 

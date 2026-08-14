@@ -122,6 +122,49 @@ router.get('/patient/my-prescriptions', authenticateToken, authorizeRole(['PATIE
   }
 });
 
+// GET /api/prescriptions/patient/:patientId — Doctor/Admin views prescriptions for a specific patient
+router.get('/patient/:patientId', authenticateToken, async (req, res) => {
+  try {
+    const prisma = getPrisma(req);
+    if (!prisma) return res.status(503).json({ error: 'Database service unavailable.' });
+
+    const { patientId } = req.params;
+
+    // Security Checks
+    if (req.user.role === 'PATIENT' && patientId !== req.user.patientId) {
+      return res.status(403).json({ error: 'Access denied to these prescriptions.' });
+    }
+
+    if (req.user.role === 'DOCTOR') {
+      const doctor = await prisma.doctor.findUnique({ where: { adminId: req.user.id } });
+      if (!doctor) return res.status(403).json({ error: 'Forbidden. Doctor profile not found.' });
+
+      const assignedAppointment = await prisma.appointment.findFirst({
+        where: { doctorId: doctor.id, patientId }
+      });
+
+      if (!assignedAppointment) {
+        return res.status(403).json({ error: 'Access denied. You are not assigned to this patient.' });
+      }
+    }
+
+    const prescriptions = await prisma.prescription.findMany({
+      where: { patientId },
+      include: {
+        items: true,
+        doctor: { include: { admin: { select: { name: true } } } },
+        consultation: { select: { diagnosis: true, symptoms: true, vitals: true, createdAt: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json({ prescriptions });
+  } catch (error) {
+    console.error('Error fetching patient prescriptions:', error);
+    return res.status(500).json({ error: 'Failed to fetch patient prescriptions.' });
+  }
+});
+
 // GET /api/prescriptions/:id — Get detailed prescription
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
