@@ -13,6 +13,8 @@ import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
 import DoctorManagement from './components/DoctorManagement';
 import DoctorScheduleManager from './components/DoctorScheduleManager';
+import PatientAppointmentBooking from './components/PatientAppointmentBooking';
+import PatientMedicalHistory from './components/PatientMedicalHistory';
 import LoginScreen from './components/LoginScreen';
 import PatientHistory from './components/PatientHistory';
 
@@ -106,7 +108,7 @@ export default function App() {
     if ([
       "dashboard", "upload", "history",
       "doctor-dashboard", "patient-dashboard",
-      "doctors", "schedules"
+      "doctors", "schedules", "book-appointment", "my-records"
     ].includes(destination)) {
       setStep(destination);
     }
@@ -242,7 +244,23 @@ export default function App() {
         <PatientDashboard
           user={user}
           token={token}
+          onNavigateBook={() => setStep('book-appointment')}
+          onNavigateRecords={() => setStep('my-records')}
           onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'book-appointment' && (
+        <PatientAppointmentBooking
+          token={token}
+          onBookingSuccess={() => setStep('patient-dashboard')}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'my-records' && (
+        <PatientMedicalHistory
+          token={token}
         />
       )}
 

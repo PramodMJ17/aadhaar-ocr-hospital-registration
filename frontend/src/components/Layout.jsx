@@ -19,7 +19,11 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
   if (userRole === 'DOCTOR') {
     navItems = [{ id: 'doctor-dashboard', label: 'Doctor Dashboard' }];
   } else if (userRole === 'PATIENT') {
-    navItems = [{ id: 'patient-dashboard', label: 'Patient Dashboard' }];
+    navItems = [
+      { id: 'patient-dashboard', label: 'Patient Dashboard' },
+      { id: 'book-appointment', label: 'Book Appointment' },
+      { id: 'my-records', label: 'Medical Records & Rx' },
+    ];
   } else {
     navItems = [
       { id: 'dashboard', label: 'Dashboard' },

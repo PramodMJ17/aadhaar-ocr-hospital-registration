@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Calendar, Pill, Clock, FileText, CheckCircle2, Hospital, ShieldCheck, ArrowRight, HeartPulse } from 'lucide-react';
+import { User, Calendar, Pill, Clock, FileText, CheckCircle2, Hospital, ShieldCheck, ArrowRight, HeartPulse, Plus } from 'lucide-react';
 
 const BACKEND_URL = 'http://localhost:5000';
 
@@ -15,7 +15,7 @@ function formatDateTime(isoString) {
   });
 }
 
-export default function PatientDashboard({ user, token, onError }) {
+export default function PatientDashboard({ user, token, onNavigateBook, onNavigateRecords, onError }) {
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -80,46 +80,72 @@ export default function PatientDashboard({ user, token, onError }) {
             </div>
           </div>
 
-          <div className="bg-surface-container-low px-5 py-4 rounded-2xl border border-outline-variant/10 text-left">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Hospital Registration ID</p>
-            <p className="text-lg font-mono font-bold text-primary mt-0.5">{user?.hospitalId || 'RMH Patient'}</p>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <button
+              type="button"
+              onClick={onNavigateBook}
+              className="inline-flex items-center justify-center gap-2 primary-gradient text-white px-5 py-3 rounded-2xl font-bold text-xs shadow-lg hover:scale-105 active:scale-95 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Book New Appointment
+            </button>
+
+            <div className="bg-surface-container-low px-5 py-3 rounded-2xl border border-outline-variant/10 text-left">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Hospital ID</p>
+              <p className="text-sm font-mono font-bold text-primary">{user?.hospitalId || 'RMH Patient'}</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Quick Metrics Cards */}
       <section className="grid gap-5 grid-cols-1 sm:grid-cols-3">
-        <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl transition-all">
+        <div
+          onClick={onNavigateBook}
+          className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl transition-all cursor-pointer group"
+        >
           <div className="flex items-center justify-between gap-4 mb-3">
             <span className="text-xs uppercase tracking-wider text-gray-500 font-bold">Upcoming Appointments</span>
-            <div className="rounded-xl p-2.5 bg-blue-50 text-blue-600 border border-blue-100">
+            <div className="rounded-xl p-2.5 bg-blue-50 text-blue-600 border border-blue-100 group-hover:scale-110 transition-transform">
               <Calendar className="w-5 h-5" />
             </div>
           </div>
           <p className="text-3xl font-extrabold text-gray-900 tracking-tight font-headline">{upcomingCount}</p>
-          <p className="mt-2 text-xs text-gray-500 font-medium">Scheduled hospital visits</p>
+          <p className="mt-2 text-xs text-blue-600 font-bold flex items-center gap-1">
+            Book new visit <ArrowRight className="w-3.5 h-3.5" />
+          </p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl transition-all">
+        <div
+          onClick={onNavigateRecords}
+          className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl transition-all cursor-pointer group"
+        >
           <div className="flex items-center justify-between gap-4 mb-3">
             <span className="text-xs uppercase tracking-wider text-gray-500 font-bold">Active Prescriptions</span>
-            <div className="rounded-xl p-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <div className="rounded-xl p-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 group-hover:scale-110 transition-transform">
               <Pill className="w-5 h-5" />
             </div>
           </div>
           <p className="text-3xl font-extrabold text-emerald-900 tracking-tight font-headline">{prescriptions.length}</p>
-          <p className="mt-2 text-xs text-emerald-600 font-medium">Issued by consulting doctors</p>
+          <p className="mt-2 text-xs text-emerald-600 font-bold flex items-center gap-1">
+            View full Rx records <ArrowRight className="w-3.5 h-3.5" />
+          </p>
         </div>
 
-        <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl transition-all">
+        <div
+          onClick={onNavigateRecords}
+          className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-md hover:shadow-xl transition-all cursor-pointer group"
+        >
           <div className="flex items-center justify-between gap-4 mb-3">
             <span className="text-xs uppercase tracking-wider text-gray-500 font-bold">Total Consultations</span>
-            <div className="rounded-xl p-2.5 bg-purple-50 text-purple-600 border border-purple-100">
+            <div className="rounded-xl p-2.5 bg-purple-50 text-purple-600 border border-purple-100 group-hover:scale-110 transition-transform">
               <HeartPulse className="w-5 h-5" />
             </div>
           </div>
           <p className="text-3xl font-extrabold text-purple-900 tracking-tight font-headline">{appointments.filter(a => a.status === 'COMPLETED').length}</p>
-          <p className="mt-2 text-xs text-purple-600 font-medium">Completed medical visits</p>
+          <p className="mt-2 text-xs text-purple-600 font-bold flex items-center gap-1">
+            View clinical history <ArrowRight className="w-3.5 h-3.5" />
+          </p>
         </div>
       </section>
 
@@ -129,14 +155,22 @@ export default function PatientDashboard({ user, token, onError }) {
         <section className="rounded-3xl bg-white border border-gray-200/80 p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold font-headline text-gray-900">My Appointments</h2>
-            <span className="text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1 rounded-full">{appointments.length} Total</span>
+            <button
+              onClick={onNavigateBook}
+              className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+            >
+              <Plus className="w-3.5 h-3.5" /> Book Appointment
+            </button>
           </div>
 
           {isLoading ? (
             <div className="p-8 text-center text-gray-500 text-sm font-medium">Loading appointments…</div>
           ) : appointments.length === 0 ? (
-            <div className="p-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 text-gray-500 text-xs">
-              No appointments booked yet.
+            <div className="p-8 text-center bg-gray-50/50 rounded-2xl border border-dashed border-gray-200 text-gray-500 text-xs space-y-2">
+              <p>No appointments booked yet.</p>
+              <button onClick={onNavigateBook} className="px-4 py-2 primary-gradient text-white rounded-xl font-bold text-xs">
+                Reserve your first slot
+              </button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -162,7 +196,12 @@ export default function PatientDashboard({ user, token, onError }) {
         <section className="rounded-3xl bg-white border border-gray-200/80 p-6 sm:p-8 shadow-sm space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold font-headline text-gray-900">My Prescriptions</h2>
-            <span className="text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full">{prescriptions.length} Active</span>
+            <button
+              onClick={onNavigateRecords}
+              className="text-xs font-bold text-emerald-600 hover:underline"
+            >
+              View All Rx
+            </button>
           </div>
 
           {isLoading ? (
@@ -173,7 +212,7 @@ export default function PatientDashboard({ user, token, onError }) {
             </div>
           ) : (
             <div className="space-y-4">
-              {prescriptions.map(rx => (
+              {prescriptions.slice(0, 3).map(rx => (
                 <div key={rx.id} className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-mono font-bold text-emerald-800">{rx.prescriptionId}</p>

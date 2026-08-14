@@ -240,3 +240,112 @@ export async function deleteDoctorUnavailability(id, unavailabilityId, token) {
   }
   return data;
 }
+
+// Clinical Consultation, Appointment Slot Booking, & Prescription API Helpers
+export async function fetchDoctorSlots(doctorId, date, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${doctorId}/slots?date=${date}`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch available doctor slots.');
+  }
+  return data;
+}
+
+export async function bookAppointment(appointmentData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/appointments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(appointmentData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to book appointment.');
+  }
+  return data;
+}
+
+export async function fetchMyAppointments(token) {
+  const response = await fetch(`${BACKEND_URL}/api/appointments`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch appointments queue.');
+  }
+  return data;
+}
+
+export async function updateAppointmentStatus(id, status, token) {
+  const response = await fetch(`${BACKEND_URL}/api/appointments/${id}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify({ status })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update appointment status.');
+  }
+  return data;
+}
+
+export async function createConsultation(consultationData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/consultations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(consultationData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to record consultation.');
+  }
+  return data;
+}
+
+export async function createPrescription(prescriptionData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/prescriptions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(prescriptionData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to create prescription.');
+  }
+  return data;
+}
+
+export async function fetchPatientPrescriptions(token) {
+  const response = await fetch(`${BACKEND_URL}/api/prescriptions/patient/my-prescriptions`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch patient prescriptions.');
+  }
+  return data;
+}
+
+export async function fetchPrescriptionDetails(id, token) {
+  const response = await fetch(`${BACKEND_URL}/api/prescriptions/${id}`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch prescription details.');
+  }
+  return data;
+}

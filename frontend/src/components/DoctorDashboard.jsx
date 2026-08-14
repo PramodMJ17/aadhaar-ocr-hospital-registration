@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Stethoscope, Calendar, Clock, UserCheck, Activity, Award, ShieldAlert, CheckCircle2, AlertCircle, CalendarDays } from 'lucide-react';
+import { Stethoscope, Calendar, Clock, UserCheck, Activity, Award, CheckCircle2, AlertCircle, CalendarDays, FileText } from 'lucide-react';
+import DoctorConsultationForm from './DoctorConsultationForm';
 
 const BACKEND_URL = 'http://localhost:5000';
 
@@ -18,35 +19,36 @@ export default function DoctorDashboard({ user, token, onError }) {
   const [appointments, setAppointments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [activeConsultationAppointment, setActiveConsultationAppointment] = useState(null);
+
+  const fetchDoctorAppointments = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/appointments`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to load doctor appointments.');
+      }
+
+      setAppointments(data.appointments || []);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch appointments.';
+      setError(message);
+      onError?.(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDoctorAppointments = async () => {
-      setIsLoading(true);
-      setError('');
-      try {
-        const response = await fetch(`${BACKEND_URL}/api/appointments`, {
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : '',
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to load doctor appointments.');
-        }
-
-        setAppointments(data.appointments || []);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to fetch appointments.';
-        setError(message);
-        onError?.(message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchDoctorAppointments();
-  }, [token, onError]);
+  }, [token]);
 
   const scheduledCount = appointments.filter(a => a.status === 'SCHEDULED' || a.status === 'CONFIRMED').length;
   const completedCount = appointments.filter(a => a.status === 'COMPLETED').length;
@@ -163,7 +165,7 @@ export default function DoctorDashboard({ user, token, onError }) {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-gray-200/80 shadow-sm">
-            <table className="w-full text-left border-collapse min-w-[650px]">
+            <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-gradient-to-r from-blue-700 to-blue-600 text-white text-xs font-bold uppercase tracking-wider">
                   <th className="px-6 py-4 border-b border-blue-800/40">Appointment ID</th>
@@ -171,33 +173,64 @@ export default function DoctorDashboard({ user, token, onError }) {
                   <th className="px-6 py-4 border-b border-blue-800/40">Hospital ID</th>
                   <th className="px-6 py-4 border-b border-blue-800/40">Date & Time</th>
                   <th className="px-6 py-4 border-b border-blue-800/40">Status</th>
+                  <th className="px-6 py-4 border-b border-blue-800/40 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200/70 text-sm text-gray-700">
-                {appointments.map((apt, index) => (
-                  <tr key={apt.id} className={`transition-colors hover:bg-blue-50/60 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/20"}`}>
-                    <td className="px-6 py-4 font-mono font-medium text-blue-950">{apt.appointmentId}</td>
-                    <td className="px-6 py-4 font-semibold text-gray-900">{apt.patient?.fullName || 'N/A'}</td>
-                    <td className="px-6 py-4 font-mono text-gray-600">{apt.patient?.hospitalId || 'N/A'}</td>
-                    <td className="px-6 py-4 text-gray-600">{formatDateTime(apt.appointmentDate)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                        apt.status === 'COMPLETED'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                          : apt.status === 'SCHEDULED'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
-                          : 'bg-gray-100 text-gray-700 border border-gray-200'
-                      }`}>
-                        {apt.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {appointments.map((apt, index) => {
+                  const isCompleted = apt.status === 'COMPLETED';
+                  return (
+                    <tr key={apt.id} className={`transition-colors hover:bg-blue-50/60 ${index % 2 === 0 ? "bg-white" : "bg-blue-50/20"}`}>
+                      <td className="px-6 py-4 font-mono font-medium text-blue-950">{apt.appointmentId}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-900">{apt.patient?.fullName || 'N/A'}</td>
+                      <td className="px-6 py-4 font-mono text-gray-600">{apt.patient?.hospitalId || 'N/A'}</td>
+                      <td className="px-6 py-4 text-gray-600">{formatDateTime(apt.appointmentDate)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                          isCompleted
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200/60'
+                        }`}>
+                          {apt.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {!isCompleted ? (
+                          <button
+                            type="button"
+                            onClick={() => setActiveConsultationAppointment(apt)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 primary-gradient text-white rounded-lg text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all"
+                          >
+                            <Stethoscope className="w-3.5 h-3.5" />
+                            Start Consultation
+                          </button>
+                        ) : (
+                          <span className="text-xs font-semibold text-emerald-700 flex items-center justify-center gap-1">
+                            <CheckCircle2 className="w-4 h-4" /> Consultation Complete
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
+
+      {/* Consultation Modal */}
+      {activeConsultationAppointment && (
+        <DoctorConsultationForm
+          appointment={activeConsultationAppointment}
+          token={token}
+          onClose={() => setActiveConsultationAppointment(null)}
+          onSuccess={async () => {
+            setActiveConsultationAppointment(null);
+            await fetchDoctorAppointments();
+          }}
+        />
+      )}
     </div>
   );
 }
