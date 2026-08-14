@@ -181,7 +181,17 @@ async function runTests() {
     const pCreateDoc = await makeRequest('/api/doctors', 'POST', { username: 'fake', password: '123' }, p1Token);
     if (pCreateDoc.status !== 403) throw new Error('Expected 403 when Patient attempts Admin action');
 
-    console.log('   ✅ Unauthorized & RBAC tokens correctly rejected.');
+    // GET /patients security tests
+    const noTokenPatients = await makeRequest('/patients', 'GET');
+    if (noTokenPatients.status !== 401) throw new Error('Expected 401 Unauthorized for unauthenticated GET /patients');
+
+    const patientRolePatients = await makeRequest('/patients', 'GET', null, p1Token);
+    if (patientRolePatients.status !== 403) throw new Error('Expected 403 Forbidden for PATIENT role accessing GET /patients');
+
+    const doctorRolePatients = await makeRequest('/patients', 'GET', null, doc1Token);
+    if (doctorRolePatients.status !== 403) throw new Error('Expected 403 Forbidden for DOCTOR role accessing GET /patients');
+
+    console.log('   ✅ Unauthorized, GET /patients security checks, & RBAC tokens correctly rejected.');
 
     // -------------------------------------------------------------
     // 5. APPOINTMENT TIME & SCHEDULE BOUNDARY NEGATIVE TESTS
@@ -329,7 +339,7 @@ async function runTests() {
       throw new Error(`Dashboard API check failed: ${JSON.stringify(dashCheck.body)}`);
     }
 
-    const patientListCheck = await makeRequest('/patients?page=1&limit=5', 'GET');
+    const patientListCheck = await makeRequest('/patients?page=1&limit=5', 'GET', null, adminToken);
     if (patientListCheck.status !== 200 || !Array.isArray(patientListCheck.body.patients)) {
       throw new Error(`Patient history list check failed: ${JSON.stringify(patientListCheck.body)}`);
     }
@@ -338,7 +348,7 @@ async function runTests() {
 
     console.log('\n🎉 COMPREHENSIVE BACKEND & SECURITY TEST SUITE COMPLETED WITH 100% SUCCESS!\n');
   } catch (error) {
-    console.error('\n❌ Test Suite Failed:', error.message);
+    console.error('\n❌ Test Suite Failed:', error.stack || error);
     process.exit(1);
   }
 }

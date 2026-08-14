@@ -1208,7 +1208,7 @@ app.post('/api/register', authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONI
   }
 });
 
-app.get("/patients", async (req, res) => {
+app.get("/patients", authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST']), async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
