@@ -24,8 +24,14 @@ export default function PatientHistory() {
 
   const fetchPatients = async () => {
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(
-        `http://localhost:5000/patients?page=${page}&limit=10`
+        `http://localhost:5000/patients?page=${page}&limit=10`,
+        {
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : ''
+          }
+        }
       );
 
       const data = await response.json();

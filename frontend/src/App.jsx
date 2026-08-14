@@ -9,6 +9,8 @@ import ScanningScreen from './components/ScanningScreen';
 import ReviewScreen from './components/ReviewScreen';
 import SuccessScreen from './components/SuccessScreen';
 import Dashboard from './components/Dashboard';
+import DoctorDashboard from './components/DoctorDashboard';
+import PatientDashboard from './components/PatientDashboard';
 import LoginScreen from './components/LoginScreen';
 import PatientHistory from './components/PatientHistory';
 
@@ -23,33 +25,47 @@ const INITIAL_PATIENT_DATA = {
 
 const BACKEND_URL = 'http://localhost:5000';
 
+function getInitialStep(token, user) {
+  if (!token) return 'upload';
+  const role = user?.role || 'ADMIN';
+  if (role === 'DOCTOR') return 'doctor-dashboard';
+  if (role === 'PATIENT') return 'patient-dashboard';
+  return 'dashboard';
+}
+
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
-  const [admin, setAdmin] = useState(() => {
-    const savedAdmin = localStorage.getItem('admin');
-    return savedAdmin ? JSON.parse(savedAdmin) : null;
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user') || localStorage.getItem('admin');
+    return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [step, setStep] = useState(token ? 'dashboard' : 'upload');
-  console.log("Current Step:", step);
+
+  const [step, setStep] = useState(() => getInitialStep(token, user));
+  console.log("Current Step:", step, "User Role:", user?.role);
+
   const [image, setImage] = useState(null);
   const [extractedData, setExtractedData] = useState(INITIAL_PATIENT_DATA);
   const [registrationResult, setRegistrationResult] = useState(null);
   const [notification, setNotification] = useState(null);
   const notificationTimerRef = useRef(null);
 
-  const handleLoginSuccess = (newToken, newAdmin) => {
+  const handleLoginSuccess = (newToken, newUser) => {
     localStorage.setItem('token', newToken);
-    localStorage.setItem('admin', JSON.stringify(newAdmin));
+    localStorage.setItem('user', JSON.stringify(newUser));
+    localStorage.setItem('admin', JSON.stringify(newUser));
     setToken(newToken);
-    setAdmin(newAdmin);
-    setStep('dashboard');
+    setUser(newUser);
+
+    const initialRoleStep = getInitialStep(newToken, newUser);
+    setStep(initialRoleStep);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     localStorage.removeItem('admin');
     setToken('');
-    setAdmin(null);
+    setUser(null);
     setStep('upload');
     setImage(null);
     setExtractedData(INITIAL_PATIENT_DATA);
@@ -76,35 +92,29 @@ export default function App() {
     }, 5000);
   };
 
- const handleReset = () => {
-  console.log("🔥 handleReset CALLED");
+  const handleReset = () => {
+    clearNotification();
+    setStep("upload");
+    setImage(null);
+    setExtractedData(INITIAL_PATIENT_DATA);
+    setRegistrationResult(null);
+  };
 
-  clearNotification();
-  setStep("upload");
-  setImage(null);
-  setExtractedData(INITIAL_PATIENT_DATA);
-  setRegistrationResult(null);
-};
+  const handleNavigate = (destination) => {
+    if ([
+      "dashboard", "upload", "history",
+      "doctor-dashboard", "patient-dashboard"
+    ].includes(destination)) {
+      setStep(destination);
+    }
+  };
 
- const handleNavigate = (destination) => {
-  console.log("🔥 handleNavigate", destination);
+  const handleBack = () => {
+    if (step === "scanning") setStep("upload");
+    if (step === "review") setStep("upload");
+    if (step === "success") setStep("review");
+  };
 
-  if (
-    destination === "dashboard" ||
-    destination === "upload" ||
-    destination === "history"
-  ) {
-    setStep(destination);
-  }
-};
-
- const handleBack = () => {
-  console.log("handleBack CALLED", step);
-
-  if (step === "scanning") setStep("upload");
-  if (step === "review") setStep("upload");
-  if (step === "success") setStep("review");
-};
   const handleUploadComplete = (img) => {
     setRegistrationResult(null);
     setImage(img);
@@ -117,81 +127,63 @@ export default function App() {
   };
 
   const handleRegister = async (updatedData) => {
-  console.log("Register button clicked");
+    const payload = {
+      fullName: updatedData.fullName || '',
+      dob: updatedData.dob || '',
+      gender: updatedData.gender || '',
+      aadhaarNumber: updatedData.aadhaarNumber || '',
+      mobile: updatedData.mobile || '',
+      address: updatedData.address || '',
+    };
 
-  const payload = {
-    fullName: updatedData.fullName || '',
-    dob: updatedData.dob || '',
-    gender: updatedData.gender || '',
-    aadhaarNumber: updatedData.aadhaarNumber || '',
-    mobile: updatedData.mobile || '',
-    address: updatedData.address || '',
-  };
+    setExtractedData(payload);
 
-  setExtractedData(payload);
-
-  let registrationResult = {
-    success: false,
-    existing: false,
-    patient: payload,
-  };
-
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
-      },
-      body: JSON.stringify(payload),
-    });
-
-    console.log("Response Status:", res.status);
-
-    const body = await res.json().catch(() => ({}));
-
-    console.log("Response Body:", body);
-
-    if (!res.ok) {
-      const message = body?.error || 'Registration failed. Please try again.';
-      showNotification(message, 'error');
-    } else if (body.success) {
-      console.log("Moving to Success Screen");
-
-      registrationResult = {
-        success: true,
-        existing: body.existing === true,
-        patient: body.patient || payload,
-      };
-    } else {
-      const message = body?.message || 'Registration response was unexpected.';
-      showNotification(message, 'warning');
-    }
-  } catch (err) {
-    console.error("Registration Error:", err);
-
-    const message =
-      err instanceof Error
-        ? err.message
-        : 'Registration service unavailable.';
-
-    showNotification(message, 'error');
-
-    registrationResult = {
+    let registrationResult = {
       success: false,
       existing: false,
       patient: payload,
     };
-  }
 
-  console.log("Final Registration Result:", registrationResult);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(payload),
+      });
 
-  setRegistrationResult(registrationResult);
+      const body = await res.json().catch(() => ({}));
 
-  console.log("Changing step to success");
+      if (!res.ok) {
+        const message = body?.error || 'Registration failed. Please try again.';
+        showNotification(message, 'error');
+      } else if (body.success) {
+        registrationResult = {
+          success: true,
+          existing: body.existing === true,
+          patient: body.patient || payload,
+        };
+      } else {
+        const message = body?.message || 'Registration response was unexpected.';
+        showNotification(message, 'warning');
+      }
+    } catch (err) {
+      console.error("Registration Error:", err);
+      const message = err instanceof Error ? err.message : 'Registration service unavailable.';
+      showNotification(message, 'error');
+      registrationResult = {
+        success: false,
+        existing: false,
+        patient: payload,
+      };
+    }
 
-  setStep('success');
-};
+    setRegistrationResult(registrationResult);
+    setStep('success');
+  };
+
   if (!token) {
     return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
@@ -199,9 +191,10 @@ export default function App() {
   return (
     <Layout 
       currentStep={step} 
-      onBack={step !== 'upload' && step !== 'dashboard' ? handleBack : undefined}
+      onBack={step !== 'upload' && step !== 'dashboard' && step !== 'doctor-dashboard' && step !== 'patient-dashboard' ? handleBack : undefined}
       onNavigate={handleNavigate}
-      admin={admin}
+      user={user}
+      admin={user}
       onLogout={handleLogout}
       notification={notification}
       onClearNotification={clearNotification}
@@ -212,9 +205,26 @@ export default function App() {
           onError={(message) => showNotification(message, 'error')}
         />
       )}
+
+      {step === 'doctor-dashboard' && (
+        <DoctorDashboard
+          user={user}
+          token={token}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'patient-dashboard' && (
+        <PatientDashboard
+          user={user}
+          token={token}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
       {step === 'history' && (
-  <PatientHistory />
-)}
+        <PatientHistory />
+      )}
 
       {step === 'upload' && (
         <UploadScreen onNext={handleUploadComplete} />
@@ -238,13 +248,13 @@ export default function App() {
       )}
       
       {step === 'success' && (
-  <SuccessScreen
-    data={extractedData}
-    result={registrationResult}
-    onReset={handleReset}
-    onViewData={() => setStep('review')}
-  />
-)}
+        <SuccessScreen
+          data={extractedData}
+          result={registrationResult}
+          onReset={handleReset}
+          onViewData={() => setStep('review')}
+        />
+      )}
     </Layout>
   );
 }
