@@ -66,6 +66,22 @@ export async function registerPatientUser(hospitalId, password, aadhaarNumber) {
   return data;
 }
 
+export async function grantPatientPortalAccess(hospitalId, password, token) {
+  const response = await fetch(`${BACKEND_URL}/api/auth/patient/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify({ hospitalId, password })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to grant portal access.');
+  }
+  return data;
+}
+
 export async function fetchAdminDashboard(token) {
   const response = await fetch(`${BACKEND_URL}/api/dashboard`, {
     headers: { 'Authorization': token ? `Bearer ${token}` : '' }
@@ -100,6 +116,127 @@ export async function registerPatient(payload, token) {
   const data = await response.json();
   if (!response.ok) {
     throw new Error(data.error || 'Registration failed.');
+  }
+  return data;
+}
+
+// Doctor Management API Helpers
+export async function createDoctor(doctorData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(doctorData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to create doctor account.');
+  }
+  return data;
+}
+
+export async function fetchDoctors(token, includeInactive = true) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors?includeInactive=${includeInactive}`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch doctors list.');
+  }
+  return data;
+}
+
+export async function fetchDoctorDetails(id, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch doctor details.');
+  }
+  return data;
+}
+
+export async function updateDoctor(id, doctorData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(doctorData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update doctor profile.');
+  }
+  return data;
+}
+
+export async function updateDoctorSchedule(id, schedules, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}/schedule`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify({ schedules })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to update doctor schedule.');
+  }
+  return data;
+}
+
+export async function fetchDoctorSchedule(id, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}/schedule`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch doctor schedule.');
+  }
+  return data;
+}
+
+export async function addDoctorUnavailability(id, leaveData, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}/unavailability`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': token ? `Bearer ${token}` : ''
+    },
+    body: JSON.stringify(leaveData)
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to add doctor leave entry.');
+  }
+  return data;
+}
+
+export async function fetchDoctorUnavailability(id, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}/unavailability`, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch doctor leave records.');
+  }
+  return data;
+}
+
+export async function deleteDoctorUnavailability(id, unavailabilityId, token) {
+  const response = await fetch(`${BACKEND_URL}/api/doctors/${id}/unavailability/${unavailabilityId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to remove doctor leave entry.');
   }
   return data;
 }

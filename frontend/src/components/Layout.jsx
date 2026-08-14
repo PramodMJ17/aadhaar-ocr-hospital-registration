@@ -25,6 +25,8 @@ export default function Layout({ children, currentStep, onBack, onNavigate, admi
       { id: 'dashboard', label: 'Dashboard' },
       { id: 'upload', label: 'Registration' },
       { id: 'history', label: 'Patient History' },
+      { id: 'doctors', label: 'Doctor Staff' },
+      { id: 'schedules', label: 'Doctor Schedules' },
     ];
   }
 

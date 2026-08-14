@@ -11,6 +11,8 @@ import SuccessScreen from './components/SuccessScreen';
 import Dashboard from './components/Dashboard';
 import DoctorDashboard from './components/DoctorDashboard';
 import PatientDashboard from './components/PatientDashboard';
+import DoctorManagement from './components/DoctorManagement';
+import DoctorScheduleManager from './components/DoctorScheduleManager';
 import LoginScreen from './components/LoginScreen';
 import PatientHistory from './components/PatientHistory';
 
@@ -41,7 +43,7 @@ export default function App() {
   });
 
   const [step, setStep] = useState(() => getInitialStep(token, user));
-  console.log("Current Step:", step, "User Role:", user?.role);
+  const [targetDoctorId, setTargetDoctorId] = useState('');
 
   const [image, setImage] = useState(null);
   const [extractedData, setExtractedData] = useState(INITIAL_PATIENT_DATA);
@@ -103,10 +105,16 @@ export default function App() {
   const handleNavigate = (destination) => {
     if ([
       "dashboard", "upload", "history",
-      "doctor-dashboard", "patient-dashboard"
+      "doctor-dashboard", "patient-dashboard",
+      "doctors", "schedules"
     ].includes(destination)) {
       setStep(destination);
     }
+  };
+
+  const handleNavigateDoctorSchedule = (doctorId) => {
+    setTargetDoctorId(doctorId);
+    setStep('schedules');
   };
 
   const handleBack = () => {
@@ -202,6 +210,22 @@ export default function App() {
       {step === 'dashboard' && (
         <Dashboard
           token={token}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'doctors' && (
+        <DoctorManagement
+          token={token}
+          onNavigateSchedule={handleNavigateDoctorSchedule}
+          onError={(message) => showNotification(message, 'error')}
+        />
+      )}
+
+      {step === 'schedules' && (
+        <DoctorScheduleManager
+          token={token}
+          initialDoctorId={targetDoctorId}
           onError={(message) => showNotification(message, 'error')}
         />
       )}

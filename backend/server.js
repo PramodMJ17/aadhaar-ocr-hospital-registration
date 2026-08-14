@@ -1216,6 +1216,11 @@ app.get("/patients", authenticateToken, authorizeRole(['ADMIN', 'RECEPTIONIST'])
     const skip = (page - 1) * limit;
 
     const patients = await prisma.patient.findMany({
+      include: {
+        user: {
+          select: { id: true, isActive: true, lastLogin: true, createdAt: true }
+        }
+      },
       orderBy: {
         createdAt: "desc",
       },
